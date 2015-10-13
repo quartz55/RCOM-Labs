@@ -33,9 +33,7 @@ int main(int argc, char** argv)
 	UA[3]=A^C_UA;
 	UA[4]=FLAG;
 
-	if ( (argc < 2) ||
-	   ((strcmp("/dev/ttyS0", argv[1])!=0) &&
-  	   (strcmp("/dev/ttyS4", argv[1])!=0) )) {
+	if(argc < 2) {
 	printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
 	exit(1);
 	}
