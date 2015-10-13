@@ -1,11 +1,13 @@
 CC = clang
 CFLAGS = -Wall -g -O3
-SRC = writenoncanonical.c
+SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
-NAME = nserial
 
-$(NAME) : $(OBJ)
-	$(CC) $(LIBS) $(OBJ) -o $@
+write : writenoncanonical.o
+	$(CC) $(LIBS) $< -o $@
+
+read : noncanonical.o
+	$(CC) $(LIBS) $< -o $@
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<
@@ -13,4 +15,4 @@ $(NAME) : $(OBJ)
 .PHONY : clean
 
 clean:
-	rm -rf $(OBJ) $(NAME)
+	rm -rf $(OBJ) read write
