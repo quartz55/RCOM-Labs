@@ -1,4 +1,4 @@
-#include "IPA.h"
+#include "link.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,9 +10,11 @@ int main(int argc, char* argv[]) {
     }
     int port = atoi(argv[1]);
     int res = -1;
-    res = llopen(port, IPA_TRANSMITTER);
+    res = llopen(port, LL_TRANSMITTER);
     if (res > 0) {
+        printf("======================\n");
         printf("Connection established\n");
+        printf("======================\n");
         llclose(res);
     }
     else printf("Not successful\n");

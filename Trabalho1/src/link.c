@@ -1,33 +1,28 @@
-#include "IPA.h"
+#include "link.h"
 
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-
-#define DEVICE "/dev/pts/"
+#include <signal.h>
 
 static struct termios oldtio;
-
-static linkLayer protocol;
-
-void linkLayer_constructor(linkLayer* l, char port_name[], uint timeout, uint nTrans) {
-    strcpy(l->port, port_name);
-    l->sequenceNumber = 0;
-    l->timeout = timeout;
-    l->numTransmissions = nTrans;
-}
+static LinkLayer protocol;
+static uint currTrans = 0;
 
 /*
  * OPEN
  */
-int llopen(int porta, int flag) {
-    if (flag != IPA_TRANSMITTER && flag != IPA_RECEIVER) {
-        printf("FLAG not supported (must be either IPA_TRANSMISSER or IPA_RECEIVER)\n");
+int llopen(int porta, LL_FLAG flag) {
+    if (flag != LL_TRANSMITTER && flag != LL_RECEIVER) {
+        printf("FLAG not supported (must be either LL_TRANSMISSER or LL_RECEIVER)\n");
         return -1;
     }
 
+    /*
+     * Open port
+     */
     char port_name[strlen(DEVICE) + 1];
     sprintf(port_name, "%s%d", DEVICE, porta);
 
@@ -40,7 +35,6 @@ int llopen(int porta, int flag) {
         return -1;
     }
 
-    linkLayer_constructor(&protocol, port_name, 1, 3);
 
     /*
      * Port configuration
@@ -60,7 +54,7 @@ int llopen(int porta, int flag) {
 
     newtio.c_lflag = 0; // non-canonical
     newtio.c_cc[VTIME]    = 0;   // inter-character timer unused
-    newtio.c_cc[VMIN]     = 1;   // blocking read until 5 chars received
+    newtio.c_cc[VMIN]     = 0;   // blocking read until 5 chars received
 
     tcflush(fd, TCIOFLUSH);
 
@@ -77,80 +71,91 @@ int llopen(int porta, int flag) {
 
 
     // Transmitter
-    if (flag == IPA_TRANSMITTER) {
+    if (flag == LL_TRANSMITTER) {
+        linkLayer_constructor(&protocol, port_name, 1, 3, LL_TRANSMITTER);
         return llopen_as_transmitter(fd);
     }
     // Receiver
     else {
+        linkLayer_constructor(&protocol, port_name, 1, 3, LL_RECEIVER);
         return llopen_as_receiver(fd);
     }
 }
 
 int llopen_as_transmitter(int fd) {
-    const char SET[] = {FLAG, A_COM_TRANS, C_SET, A_COM_TRANS^C_SET, FLAG};
-    const char UA[] = {FLAG, A_ANS_RECEIV, C_UA, A_ANS_RECEIV^C_UA, FLAG};
 
     printf("Setting port as transmitter...\n");
 
-    printf("Sending SET: ");
-    print_frame_i(SET, sizeof(SET));
-    printf("\n");
-    write(fd, SET, 5*sizeof(char));
+    print_frame(SET, sizeof(SET), "Sending SET:");
+    write(fd, SET, sizeof(SET));
 
-    printf("Waiting for UA...\n");
+    print_frame(UA, sizeof(UA), "Waiting for UA");
+
     char buf[5];
-    int res = read_frame(fd, buf);
+    int res = read_frame_timeout(fd, buf, SET, sizeof(SET));
 
-    if (compare_frames(buf, UA, sizeof(UA))) {
-        printf("Received UA: ");
-        print_frame_i(UA, sizeof(UA));
-        printf("\n");
+    if (compare_frames(buf, UA, res)) {
+        print_frame(buf, res, "Received UA:");
         return fd;
     }
 
-    printf("Not a valid response...\n");
+    printf("Not a valid response\n");
     return -1;
 }
 
 int llopen_as_receiver(int fd) {
-    const char SET[] = {FLAG, A_COM_TRANS, C_SET, A_COM_TRANS^C_SET, FLAG};
-    const char UA[] = {FLAG, A_ANS_RECEIV, C_UA, A_ANS_RECEIV^C_UA, FLAG};
-
     printf("Setting port as receiver...\n");
 
-    printf("Waiting for SET...\n");
+    print_frame(SET, sizeof(SET), "Waiting for SET");
+
     char buf[5];
     int res = read_frame(fd, buf);
 
     if (compare_frames(buf, SET, sizeof(SET))) {
-        printf("Received SET: ");
-        print_frame_i(buf, sizeof(buf));
-        printf("\n");
+        print_frame(buf, res, "Received SET:");
 
-        printf("Sending UA: ");
-        print_frame_i(UA, sizeof(UA));
-        printf("\n");
+        print_frame(UA, sizeof(UA), "Sending UA:");
 
         write(fd, UA, sizeof(UA));
         return fd;
     }
 
-    printf("Unnexpected answer\n");
-    print_frame_i(buf, sizeof(buf));
-    printf("\n");
+    print_frame(buf, sizeof(buf), "Unnexpected answer");
     return -1;
 }
 
 /*
- * OPEN
+ * CLOSE
  */
 int llclose(int fd) {
+    if (protocol.mode == LL_TRANSMITTER) {
+        print_frame(DISC_T, sizeof(DISC_T), "Sending DISC:");
+
+        char buf[5];
+        int res = read_frame_timeout(fd, buf, DISC_T, sizeof(DISC_T));
+        if (res < 0) {
+            goto close;
+        }
+
+        if (compare_frames(buf, DISC_R, res)) {
+            print_frame(buf, res, "DISC received:");
+            print_frame(UA, sizeof(UA), "Sending UA:");
+
+            write(fd, UA, sizeof(UA));
+        }
+    }
+
+close:
     printf("Restoring old port configuration...\n");
     if (tcsetattr(fd, TCSANOW, &oldtio) == -1 ){
         perror("tcsetattr");
         return -1;
     }
 
+    printf("Closing port...\n");
+    printf("============\n");
+    printf("Disconnected\n");
+    printf("============\n");
     close(fd);
     return 1;
 }
@@ -158,6 +163,53 @@ int llclose(int fd) {
 /*
  * Misc
  */
+int read_frame_timeout(int fd, char* frame, const char msg[], unsigned long msg_size) {
+    write(fd, msg, msg_size);
+
+    int size = 0, res = -1;
+
+    (void) signal(SIGALRM, timeout);
+    alarm(protocol.timeout);
+    currTrans = 0;
+    uint trasTracker = currTrans;
+    uint maxTrans = protocol.numTransmissions;
+    // Read until a frame is found (FLAG is read)
+    char c;
+    do {
+        res = read(fd, &c, sizeof(c));
+        if (res < 0) {
+            perror("read");
+            return -1;
+        }
+        if (trasTracker != currTrans) {
+            trasTracker = currTrans;
+            if (currTrans > maxTrans) {
+                printf("Could not get answer...\n");
+                return -1;
+            }
+            printf("!!!TIMEOUT!!! Retrying... (%dx)\n", currTrans);
+            write(fd, msg, msg_size);
+            alarm(protocol.timeout);
+        }
+    } while (c != FLAG);
+
+    // Read until the end of frame (FLAG is read)
+    do {
+        frame[size++] = c;
+        res = read(fd, &c, sizeof(c));
+        if (res < 0) {
+            perror("read");
+            return -1;
+        }
+        if (c == FLAG) {
+            frame[size++] = c;
+            break;
+        }
+    } while (size < MAX_SIZE);
+
+    return size;
+}
+
 int read_frame(int fd, char* frame) {
     int size = 0, res = -1;
 
@@ -188,7 +240,7 @@ int read_frame(int fd, char* frame) {
     return size;
 }
 
-int compare_frames(const char f1[], const char f2[], unsigned int size) {
+bool compare_frames(const char f1[], const char f2[], unsigned int size) {
     int i;
     for (i=0; i < size; ++i) {
         if (f1[i] != f2[i]) return false;
@@ -197,20 +249,17 @@ int compare_frames(const char f1[], const char f2[], unsigned int size) {
     return true;
 }
 
-int print_frame(const char frame[], unsigned int size) {
+int print_frame(const char frame[], unsigned int size, char msg[]) {
+    printf("%s\t", msg);
     int i;
     printf("| ");
     for (i=0; i < size; i++) printf("%X | ", frame[i]);
+
+    printf("(%d bytes)\n", size);
 
     return 1;
 }
 
-int print_frame_i(const char frame[], unsigned int size) {
-    int i;
-    printf("| ");
-    for (i=0; i < size; i++) printf("%X | ", frame[i]);
-
-    printf("(%d bytes)", size);
-
-    return 1;
+void timeout() {
+    currTrans++;
 }
