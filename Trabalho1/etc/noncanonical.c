@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define BAUDRATE B38400
 #define _POSIX_SOURCE 1 /* POSIX compliant source */
@@ -33,17 +34,10 @@ int main(int argc, char** argv)
   UA[3]=A^C_UA;
   UA[4]=FLAG;
 
-<<<<<<< HEAD
-	if(argc < 2) {
-	printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
-	exit(1);
-	}
-=======
   if (argc < 2) {
       printf("Usage:\tnserial SerialPort\n\tex: nserial /dev/ttyS1\n");
       exit(1);
   }
->>>>>>> Better makefile
 
 /*
   Open serial port device for reading and writing and not as controlling tty

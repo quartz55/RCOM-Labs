@@ -1,17 +1,36 @@
-/**
- * @file   IPA.h
- * HEADER file for the IPA api
- *
- */
-
 #ifndef IPA_H
 #define IPA_H
 
 #define MAX_SIZE 512
+#define BAUDRATE B38400
+
+// Flags
+/*
+  INFO FRAME
+
+  | F | A | C | BCC1 | DATA --- DATA | BCC2 | F |
+
+
+  SUPERVISION FRAMES
+
+  | F | A | C | BCC1 | F |
+
+*/
+#define FLAG 0x7e
+#define A_COM_TRANS 0x03
+#define A_ANS_TRANS 0x01
+#define A_COM_RECEIV 0x01
+#define A_ANS_RECEIV 0x03
+#define C_SET 0x07
+#define C_DISC 0x0b
+#define C_UA 0x03
 
 typedef unsigned int uint;
 typedef enum {false, true} bool;
 
+/*
+ * Data structures
+ */
 typedef enum {
     IPA_TRANSMITTER,
     IPA_RECEIVER
@@ -31,6 +50,10 @@ typedef struct {
 
     char frame[MAX_SIZE];
 } linkLayer;
+
+/*
+ * Functions
+ */
 
 /**
  * Establishes a connection on the port specified
@@ -71,5 +94,13 @@ int llread(int fd, char* buffer);
  * @return 1 if success, -1 is error
  */
 int llclose(int fd);
+
+int llopen_as_transmitter(int fd);
+int llopen_as_receiver(int fd);
+
+int read_frame(int fd, char* frame);
+int compare_frames(const char f1[], const char f2[], unsigned int size);
+int print_frame(const char frame[], unsigned int size);
+int print_frame_i(const char frame[], unsigned int size);
 
 #endif /* IPA_H */
