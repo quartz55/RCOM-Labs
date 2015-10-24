@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
     }
     int port = atoi(argv[1]);
     int res = -1;
-    res = llopen(port, LL_TRANSMITTER);
+    res = llopen(port, CONN_TRANSMITTER);
     if (res > 0) {
         printf("======================\n");
         printf("Connection established\n");

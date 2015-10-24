@@ -11,26 +11,14 @@ int main(int argc, char* argv[]) {
     }
     int port = atoi(argv[1]);
     int fd = -1;
-    fd = llopen(port, LL_RECEIVER);
+    fd = llopen(port, CONN_RECEIVER);
     if (fd > 0) {
         printf("======================\n");
         printf("Connection established\n");
         printf("======================\n");
-        return llclose(fd);
-        while (1) {
-            char buf[MAX_SIZE];
-            read_frame(fd, buf);
 
-            if (compare_frames(buf, DISC_T, sizeof(DISC_T))) {
-                write(fd, DISC_R, sizeof(DISC_R));
-
-                read_frame_timeout(fd, buf, DISC_R, sizeof(DISC_R));
-
-                if (compare_frames(buf, UA, sizeof(UA))) {
-                    break;
-                }
-            }
-        }
+        char buf[512];
+        llread(fd, buf);
 
         llclose(fd);
     }

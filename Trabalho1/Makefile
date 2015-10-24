@@ -13,10 +13,10 @@ VPATH = SRC_DIR:OBJ_DIR:OUT_DIR
 
 all: receiver transmitter
 
-receiver : $(addprefix $(OBJ_DIR), link.o receiver.o) | bin
+receiver : $(addprefix $(OBJ_DIR), link.o llframe.o receiver.o) | bin
 	$(CC) $(LIBS) $^ -o $(OUT_DIR)$@
 
-transmitter : $(addprefix $(OBJ_DIR), link.o transmitter.o) | bin
+transmitter : $(addprefix $(OBJ_DIR), link.o llframe.o transmitter.o) | bin
 	$(CC) $(LIBS) $^ -o $(OUT_DIR)$@
 
 $(OBJ_DIR)%.o : $(SRC_DIR)%.c | obj

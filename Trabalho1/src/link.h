@@ -1,11 +1,11 @@
 #ifndef LINK_H
 #define LINK_H
 
-#include "link/link_data.h"
-#include "link/link_utils.h"
 #include "link/link_struct.h"
+#include "llframe.h"
+#include "utils.h"
 
-extern void timeout();
+extern LinkLayer ll;
 
 /**
  * Establishes a connection on the port specified
@@ -15,7 +15,7 @@ extern void timeout();
  *
  * @return id of connection, -1 if error
  */
-extern int llopen(int porta, LL_FLAG flag);
+extern int llopen(int porta, ConnectionFlag flag);
 
 /**
  * Sends information through a connection
@@ -26,7 +26,7 @@ extern int llopen(int porta, LL_FLAG flag);
  *
  * @return Number of chars sent, -1 if error
  */
-extern int llwrite(int fd, char* buffer, int length);
+extern int llwrite(int fd, const char* buffer, uint length);
 
 /**
  * Reads information from a connection
@@ -47,14 +47,10 @@ extern int llread(int fd, char* buffer);
  */
 extern int llclose(int fd);
 
-
-
 extern int llopen_as_transmitter(int fd);
 extern int llopen_as_receiver(int fd);
 
-extern int read_frame(int fd, char* frame);
-extern int read_frame_timeout(int fd, char* frame, const char msg[], unsigned long msg_size);
-extern bool compare_frames(const char f1[], const char f2[], unsigned int size);
-extern int print_frame(const char frame[], unsigned int size, char msg[]);
+extern int send_with_retransmission(int fd, LLFrame* msg, LL_C answer);
+extern int configureTermios(int fd, struct termios *t);
 
 #endif /* LINK_H */
