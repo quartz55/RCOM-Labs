@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -79,7 +80,7 @@ int llopen_as_receiver(int fd) {
 
     if (LLFrame_is_command(comm, C_SET)) {
         LLFrame* ua = LLFrame_create_command(A_ANS_R, C_UA, 0);
-        write(fd, ua->data.message, ua->data.size);
+        LLFrame_write(ua, fd);
         LLFrame_delete(&ua);
     }
     else {
@@ -95,13 +96,62 @@ int llopen_as_receiver(int fd) {
  * WRITE
  */
 int llwrite(int fd, const char* buffer, uint length) {
-    return 0;
+    uint numTries = 0;
+    bool transfering = true;
+
+    (void) signal(SIGALRM, alarm_handler);
+
+    LLFrame* data = LLFrame_create_info(buffer, length, ll.sequenceNumber);
+    while (transfering) {
+        if (numTries == 0 || alarmRing) {
+            if (numTries > ll.numTransmissions) {
+                alarm(0);
+                printf("!!!ERROR::RETRANSMISSION - Maximum number of retransmissions exceeded!!!!\n");
+                transfering = false;
+                break;
+            }
+
+            if (alarmRing)
+                printf("!!!ERROR::TIMEOUT - Retrying (%dx)\n", numTries);
+
+            alarmRing = false;
+            alarm(ll.timeout);
+
+            LLFrame_write(data, fd);
+
+            ++numTries;
+        }
+
+        char c;
+        read(fd, &c, sizeof(c));
+        if (c==FLAG) {
+            LLFrame* response = LLFrame_from_fd(fd);
+            if (LLFrame_is_command(response, C_RR)) {
+                if (ll.sequenceNumber != response->nr)
+                    ll.sequenceNumber = response->nr;
+
+                printf("Received RR\n");
+                alarm(0);
+                transfering = false;
+            }
+            else if (LLFrame_is_command(response, C_REJ)) {
+                alarm(0);
+                numTries = 0;
+            }
+            LLFrame_delete(&response);
+        }
+    }
+
+    LLFrame_delete(&data);
+    alarm(0);
+
+    return 1;
 }
 
 /*
  * READ
  */
-int llread(int fd, char* buffer) {
+int llread(int fd, char** buffer) {
     bool done = false;
     while (!done) {
         char c;
@@ -110,12 +160,34 @@ int llread(int fd, char* buffer) {
         }while(c != FLAG);
 
         LLFrame* buf = LLFrame_from_fd(fd);
-        if (LLFrame_is_command(buf, C_DISC)) {
+        if (LLFrame_is_invalid(buf) && buf != NULL) {
+            if (buf->error == LL_ERROR_BCC2) {
+                LLFrame* rej = LLFrame_create_command(A_ANS_R, C_REJ, buf->ns);
+                LLFrame_write(rej, fd);
+                LLFrame_delete(&rej);
+            }
+        }
+        else if (LLFrame_is_command(buf, C_DISC)) {
             LLFrame* disc = LLFrame_create_command(A_COM_R, C_DISC, 0);
             send_with_retransmission(fd, disc, C_UA);
             LLFrame_delete(&disc);
+
             done = true;
         }
+        else if (buf->type == LL_FRAME_INFO) {
+            if (ll.sequenceNumber == buf->ns) {
+                LLFrame_get_data(buf, buffer);
+
+                ll.sequenceNumber = !buf->ns;
+
+                LLFrame* rr = LLFrame_create_command(A_ANS_R, C_RR, ll.sequenceNumber);
+                LLFrame_write(rr, fd);
+                LLFrame_delete(&rr);
+
+                done = true;
+            }
+        }
+        LLFrame_delete(&buf);
     }
 
     return 0;
@@ -135,7 +207,7 @@ int llclose(int fd) {
         if (!res) goto close;
 
         LLFrame* ua = LLFrame_create_command(A_ANS_T, C_UA, 0);
-        write(fd, ua->data.message, ua->data.size);
+        LLFrame_write(ua, fd);
         LLFrame_delete(&ua);
     }
 
@@ -174,7 +246,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
             alarmRing = false;
             alarm(ll.timeout);
 
-            write(fd, msg->data.message, msg->data.size);
+            LLFrame_write(msg, fd);
 
             ++numTries;
         }

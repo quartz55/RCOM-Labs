@@ -17,8 +17,17 @@ int main(int argc, char* argv[]) {
         printf("Connection established\n");
         printf("======================\n");
 
-        char buf[512];
-        llread(fd, buf);
+        char* buf;
+        llread(fd, &buf);
+
+        printf("Received message: %s\n", buf);
+        free(buf);
+
+        llread(fd, &buf);
+        printf("Received message: %s\n", buf);
+        free(buf);
+
+        llread(fd, &buf);
 
         llclose(fd);
     }

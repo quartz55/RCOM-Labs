@@ -9,13 +9,21 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     int port = atoi(argv[1]);
-    int res = -1;
-    res = llopen(port, CONN_TRANSMITTER);
-    if (res > 0) {
+    int fd = -1;
+    fd = llopen(port, CONN_TRANSMITTER);
+    if (fd > 0) {
         printf("======================\n");
         printf("Connection established\n");
         printf("======================\n");
-        llclose(res);
+        char* test = "fffaaafff";
+        printf("Sending message: %s\n", test);
+        llwrite(fd, test, strlen(test));
+
+        char* test2 = "123123";
+        printf("Sending message: %s\n", test2);
+        llwrite(fd, test2, strlen(test2));
+
+        llclose(fd);
     }
     else printf("Not successful\n");
 

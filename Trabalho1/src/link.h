@@ -36,7 +36,7 @@ extern int llwrite(int fd, const char* buffer, uint length);
  *
  * @return Number of chars read, -1 if error
  */
-extern int llread(int fd, char* buffer);
+extern int llread(int fd, char** buffer);
 
 /**
  * Closes the connection specified
