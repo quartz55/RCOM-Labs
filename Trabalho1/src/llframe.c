@@ -134,14 +134,14 @@ LLFrame* LLFrame_from_fd(int fd) {
 
     char c;
     uint size;
-    char buf[MAX_SIZE];
+    char* buf = (char*) malloc(MAX_SIZE*sizeof(char));
 
 skipflags:
     read(fd, &c, sizeof(c));
     while (c == FLAG) read(fd, &c, sizeof(c));
 
     size = 0;
-    bzero(buf, MAX_SIZE);
+    /* bzero(buf, MAX_SIZE); */
     do {
         /* printf("%c/%X\n", c, c); */
         buf[size] = c;
@@ -153,14 +153,35 @@ skipflags:
     printf("Read %d bytes\n", size+2);
     if (size < 3) goto skipflags;
 
+    int destuff_size = destuff_buffer(&buf, size);
 
-    LLFrame* frame = LLFrame_from_buf(buf, size);
+    LLFrame* frame = LLFrame_from_buf(buf, destuff_size);
+    free(buf);
+
     return frame;
 }
 
 int LLFrame_write(LLFrame* frame, int fd) {
+    int written = 0;
+
+    char *stuffed = (char*) malloc(frame->data.size*sizeof(char));
+    memcpy(stuffed, frame->data.message, frame->data.size);
+
+    int stuffed_size = stuff_buffer(&stuffed, frame->data.size);
+
+    LLFrame test;
+    test.type = LL_FRAME_COMMAND;
+    test.data.message = stuffed;
+    test.data.size = stuffed_size;
+
+    /* LLFrame_print_msg(&test, "Stuffed: "); */
+
     printf("Write %d bytes\n", frame->data.size);
-    return write(fd, frame->data.message, frame->data.size);
+    written = write(fd, stuffed, stuffed_size);
+
+    free(stuffed);
+
+    return written;
 }
 
 int LLFrame_get_data(LLFrame *frame, char** buff) {
@@ -231,6 +252,50 @@ void LLFrame_delete(LLFrame** frame) {
     (*frame)->data.message = NULL;
     free(*frame);
     *frame = NULL;
+}
+
+int stuff_buffer(char** buffer, uint size) {
+    int newSize = size;
+
+    uint i;
+    for (i = 1; i < size-1; ++i) {
+        if ((*buffer)[i] == FLAG || (*buffer)[i] == ESC) {
+            ++newSize;
+        }
+    }
+
+    (*buffer) = (char*) realloc((*buffer), newSize*sizeof(char));
+
+    for (i = 1; i < size-1; ++i) {
+        if ((*buffer)[i] == FLAG || (*buffer)[i] == ESC) {
+            memmove((*buffer)+(i+1), (*buffer)+i, size-i);
+
+            (*buffer)[i] = ESC;
+            (*buffer)[i+1] ^= 0x20;
+
+            ++size;
+        }
+    }
+
+    return newSize;
+}
+
+int destuff_buffer(char** buffer, uint size) {
+    int newSize = size;
+
+    uint i;
+    for (i = 1; i < newSize -1; ++i) {
+        if ((*buffer)[i] == ESC) {
+            memmove((*buffer)+i, (*buffer)+(i+1), newSize-(i+1));
+
+            (*buffer)[i] ^= 0x20;
+
+            --newSize;
+        }
+    }
+
+    (*buffer) = (char*) realloc((*buffer), newSize);
+    return newSize;
 }
 
 char getBCC(const char buf[], uint size) {

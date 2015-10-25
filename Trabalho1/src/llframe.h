@@ -37,6 +37,7 @@ typedef struct {
         char* message;
         uint size;
     } data;
+
 } LLFrame;
 
 extern LLFrame* LLFrame_create_info(const char* data, uint dataSize, int ns);
@@ -51,6 +52,8 @@ extern void LLFrame_print(LLFrame* frame);
 extern void LLFrame_print_msg(LLFrame* frame, const char msg[]);
 extern void LLFrame_print_data(LLFrame *frame);
 extern void LLFrame_delete(LLFrame** frame);
+extern int stuff_buffer(char** buffer, uint size);
+extern int destuff_buffer(char** buffer, uint size);
 extern char getBCC(const char buf[], uint size);
 extern void print_command(LL_C c);
 

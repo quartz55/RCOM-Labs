@@ -24,10 +24,6 @@ int main(int argc, char* argv[]) {
         free(buf);
 
         llread(fd, &buf);
-        printf("Received message: %s\n", buf);
-        free(buf);
-
-        llread(fd, &buf);
 
         llclose(fd);
     }

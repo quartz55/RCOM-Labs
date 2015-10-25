@@ -15,13 +15,9 @@ int main(int argc, char* argv[]) {
         printf("======================\n");
         printf("Connection established\n");
         printf("======================\n");
-        char* test = "fffaaafff";
+        char test[5] = {FLAG, ESC, FLAG, FLAG, ESC};
         printf("Sending message: %s\n", test);
         llwrite(fd, test, strlen(test));
-
-        char* test2 = "123123";
-        printf("Sending message: %s\n", test2);
-        llwrite(fd, test2, strlen(test2));
 
         llclose(fd);
     }
