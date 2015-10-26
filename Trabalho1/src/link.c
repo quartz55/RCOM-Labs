@@ -1,3 +1,4 @@
+#define LINKLAYER_GLOBAL
 #include "link.h"
 #include "alarm.h"
 
@@ -7,7 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 
-LinkLayer ll;
+LinkLayer* ll;
 
 /*
  * OPEN
@@ -31,26 +32,14 @@ int llopen(int porta, ConnectionFlag flag) {
         return -1;
     }
 
-    /*
-     * Port configuration
-     */
-    printf("Starting port configuration...\n");
-
-    if (tcgetattr(fd, &ll.oldtio) == -1) {
-        perror("tcgetattr");
-        return -1;
-    }
-
-    if (!configureTermios(fd, &ll.newtio)) return -1;
-
     // Transmitter
     if (flag == CONN_TRANSMITTER) {
-        linkLayer_constructor(&ll, port_name, 1, 3, CONN_TRANSMITTER);
+        linkLayer_constructor(fd, port_name, 1, 3, CONN_TRANSMITTER);
         return llopen_as_transmitter(fd);
     }
     // Receiver
     else {
-        linkLayer_constructor(&ll, port_name, 1, 3, CONN_RECEIVER);
+        linkLayer_constructor(fd, port_name, 1, 3, CONN_RECEIVER);
         return llopen_as_receiver(fd);
     }
 }
@@ -98,13 +87,14 @@ int llopen_as_receiver(int fd) {
 int llwrite(int fd, const char* buffer, uint length) {
     uint numTries = 0;
     bool transfering = true;
+    int written = -1;
 
     (void) signal(SIGALRM, alarm_handler);
 
-    LLFrame* data = LLFrame_create_info(buffer, length, ll.sequenceNumber);
+    LLFrame* data = LLFrame_create_info(buffer, length, ll->sequenceNumber);
     while (transfering) {
         if (numTries == 0 || alarmRing) {
-            if (numTries > ll.numTransmissions) {
+            if (numTries > ll->numTransmissions) {
                 alarm(0);
                 printf("!!!ERROR::RETRANSMISSION - Maximum number of retransmissions exceeded!!!!\n");
                 transfering = false;
@@ -115,9 +105,9 @@ int llwrite(int fd, const char* buffer, uint length) {
                 printf("!!!ERROR::TIMEOUT - Retrying (%dx)\n", numTries);
 
             alarmRing = false;
-            alarm(ll.timeout);
+            alarm(ll->timeout);
 
-            LLFrame_write(data, fd);
+            written = LLFrame_write(data, fd);
 
             ++numTries;
         }
@@ -127,10 +117,9 @@ int llwrite(int fd, const char* buffer, uint length) {
         if (c==FLAG) {
             LLFrame* response = LLFrame_from_fd(fd);
             if (LLFrame_is_command(response, C_RR)) {
-                if (ll.sequenceNumber != response->nr)
-                    ll.sequenceNumber = response->nr;
+                if (ll->sequenceNumber != response->nr)
+                    ll->sequenceNumber = response->nr;
 
-                printf("Received RR\n");
                 alarm(0);
                 transfering = false;
             }
@@ -145,13 +134,14 @@ int llwrite(int fd, const char* buffer, uint length) {
     LLFrame_delete(&data);
     alarm(0);
 
-    return 1;
+    return written;
 }
 
 /*
  * READ
  */
 int llread(int fd, char** buffer) {
+    int size = 0;
     bool done = false;
     while (!done) {
         char c;
@@ -175,12 +165,12 @@ int llread(int fd, char** buffer) {
             done = true;
         }
         else if (buf->type == LL_FRAME_INFO) {
-            if (ll.sequenceNumber == buf->ns) {
-                LLFrame_get_data(buf, buffer);
+            if (ll->sequenceNumber == buf->ns) {
+                size = LLFrame_get_data(buf, buffer);
 
-                ll.sequenceNumber = !buf->ns;
+                ll->sequenceNumber = !buf->ns;
 
-                LLFrame* rr = LLFrame_create_command(A_ANS_R, C_RR, ll.sequenceNumber);
+                LLFrame* rr = LLFrame_create_command(A_ANS_R, C_RR, ll->sequenceNumber);
                 LLFrame_write(rr, fd);
                 LLFrame_delete(&rr);
 
@@ -190,14 +180,14 @@ int llread(int fd, char** buffer) {
         LLFrame_delete(&buf);
     }
 
-    return 0;
+    return size;
 }
 
 /*
  * CLOSE
  */
 int llclose(int fd) {
-    if (ll.mode == CONN_TRANSMITTER) {
+    if (ll->mode == CONN_TRANSMITTER) {
         printf("Closing connection...\n");
 
         LLFrame* disc = LLFrame_create_command(A_COM_T, C_DISC, 0);
@@ -213,7 +203,7 @@ int llclose(int fd) {
 
 close:
     printf("Restoring old port configuration...\n");
-    if (tcsetattr(fd, TCSANOW, &ll.oldtio) == -1 ){
+    if (tcsetattr(fd, TCSANOW, &ll->oldtio) == -1 ){
         perror("tcsetattr");
         return -1;
     }
@@ -234,7 +224,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
 
     while (!done) {
         if (numTries == 0 || alarmRing) {
-            if (numTries > ll.numTransmissions) {
+            if (numTries > ll->numTransmissions) {
                 alarm(0);
                 printf("!!!ERROR::RETRANSMISSION - Maximum number of retransmissions exceeded!!!!\n");
                 done = true;
@@ -244,7 +234,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
                 printf("!!!ERROR::TIMEOUT - Retrying (%dx)\n", numTries);
 
             alarmRing = false;
-            alarm(ll.timeout);
+            alarm(ll->timeout);
 
             LLFrame_write(msg, fd);
 
@@ -272,8 +262,8 @@ int configureTermios(int fd, struct termios *t) {
     t->c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
     t->c_iflag = IGNPAR;
     t->c_oflag = OPOST;
-
     t->c_lflag = 0; // non-canonical
+
     t->c_cc[VTIME]    = 0;   // inter-character timer unused
     t->c_cc[VMIN]     = 0;   // blocking read until 5 chars received
 
@@ -291,4 +281,24 @@ int configureTermios(int fd, struct termios *t) {
     printf("  |\tVMIN | %d\n", t->c_cc[VMIN]);
 
     return true;
+}
+
+int linkLayer_constructor(int fd, char* port_name, uint timeout, uint nTrans, ConnectionFlag mode){
+    ll = (LinkLayer*) malloc(sizeof(LinkLayer));
+    strcpy(ll->port, port_name);
+    ll->sequenceNumber = 0;
+    ll->timeout = timeout;
+    ll->numTransmissions = nTrans;
+    ll->mode = mode;
+
+    printf("Saving previous port configuration...\n");
+    if (tcgetattr(fd, &ll->oldtio) == -1) {
+        perror("tcgetattr");
+        return -1;
+    }
+
+    printf("Configuring new port...\n");
+    if (!configureTermios(fd, &ll->newtio)) return -1;
+
+    return 1;
 }

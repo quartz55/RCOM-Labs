@@ -1,11 +1,25 @@
 #ifndef LINK_H
 #define LINK_H
 
-#include "link/link_struct.h"
 #include "llframe.h"
 #include "utils.h"
 
-extern LinkLayer ll;
+#include <termios.h>
+
+typedef struct {
+    char port[20];
+    int baudRate;
+    uint sequenceNumber;
+    uint timeout;
+    uint numTransmissions;
+    ConnectionFlag mode;
+
+    struct termios oldtio, newtio;
+} LinkLayer;
+
+extern LinkLayer* ll;
+
+extern int linkLayer_constructor(int fd, char* port_name, uint timeout, uint nTrans, ConnectionFlag mode);
 
 /**
  * Establishes a connection on the port specified

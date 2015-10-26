@@ -23,7 +23,9 @@ LLFrame* LLFrame_create_info(const char* data, uint dataSize, int ns) {
 
     f->data.message = msg;
 
-    LLFrame_print_msg(f, "Info created: ");
+    printf("Info %d created\n", f->ns);
+    /* LLFrame_print_data(f); printf("\n"); */
+    /* LLFrame_print_msg(f, "Info created: "); */
 
     return f;
 }
@@ -141,16 +143,15 @@ skipflags:
     while (c == FLAG) read(fd, &c, sizeof(c));
 
     size = 0;
-    /* bzero(buf, MAX_SIZE); */
+    bzero(buf, MAX_SIZE);
     do {
-        /* printf("%c/%X\n", c, c); */
         buf[size] = c;
         res = read(fd, &c, sizeof(c));
         if (res < 0) perror("!!!ERROR::IO");
         else if (res == 0) continue;
         ++size;
     } while (c != FLAG && size < MAX_SIZE);
-    printf("Read %d bytes\n", size+2);
+    /* printf("Read %d bytes\n", size+2); */
     if (size < 3) goto skipflags;
 
     int destuff_size = destuff_buffer(&buf, size);
@@ -174,12 +175,13 @@ int LLFrame_write(LLFrame* frame, int fd) {
     test.data.message = stuffed;
     test.data.size = stuffed_size;
 
-    /* LLFrame_print_msg(&test, "Stuffed: "); */
-
-    printf("Write %d bytes\n", frame->data.size);
     written = write(fd, stuffed, stuffed_size);
+    /* printf("Write %d bytes\n", written); */
 
     free(stuffed);
+
+    if (frame->type == LL_FRAME_COMMAND) return 0;
+    else if (frame->type == LL_FRAME_INFO) return frame->data.size - 6;
 
     return written;
 }
@@ -191,7 +193,7 @@ int LLFrame_get_data(LLFrame *frame, char** buff) {
     *buff = (char*) malloc(dataSize*sizeof(char));
     memcpy(*buff, &frame->data.message[4], dataSize);
 
-    return 1;
+    return dataSize;
 }
 
 bool LLFrame_is_invalid(LLFrame* frame) {
