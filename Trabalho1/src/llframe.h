@@ -3,7 +3,7 @@
 
 #include "utils.h"
 
-#define MAX_SIZE 128
+#define MAX_SIZE 1
 
 #define FLAG 0x7e
 #define ESC 0x7d

@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-static int DEBUG = 1;
+static int DEBUG = 0;
 
 typedef unsigned int uint;
 typedef enum {false, true} bool;

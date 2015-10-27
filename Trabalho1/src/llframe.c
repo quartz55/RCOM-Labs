@@ -154,10 +154,10 @@ skipflags:
         if (size >= MAX_SIZE)
             buf = (char*) realloc(buf, ++size_inc*MAX_SIZE*sizeof(char));
     } while (c != FLAG);
-    /* printf("Read %d bytes\n", size+2); */
     if (size < 3) goto skipflags;
 
     int destuff_size = destuff_buffer(&buf, size);
+    /* printf("Read %d bytes (%d after destuff)\n", size+2, destuff_size+2); */
 
     LLFrame* frame = LLFrame_from_buf(buf, destuff_size);
     free(buf);

@@ -68,7 +68,6 @@ int AppLayer_send(AppLayer* app) {
 
     char buffer[MAX_SIZE];
     while((read = fread(buffer, sizeof(char), MAX_SIZE, file)) > 0) {
-        /* printf("Read from file: %s\n", buffer); */
         DataPackage* pkg = DataPackage_create(i%255, buffer, read);
         int wr = llwrite(app->fd, pkg->buffer, pkg->dataSize+4);
         DataPackage_delete(&pkg);
@@ -80,7 +79,9 @@ int AppLayer_send(AppLayer* app) {
         }
         written += wr;
 
+        if (DEBUG)
         printf("%d/%d (%.0f\%%)\n", written, filesize, ((float)written/filesize)*100);
+        else printProgressBar(written, filesize);
     }
 
     if (fclose(file) != 0) {
@@ -100,21 +101,21 @@ int AppLayer_send(AppLayer* app) {
 int AppLayer_receive(AppLayer* app) {
     int res = 0;
 
-    char* pkg_buf;
+    char* buffer;
     int pkgSize;
 
     // Get START Package
-    pkgSize = llread(app->fd, &pkg_buf);
-    CtrlPackage* pkg = CtrlPackage_from_buf(pkg_buf, pkgSize);
+    pkgSize = llread(app->fd, &buffer);
+    CtrlPackage* pkg = CtrlPackage_from_buf(buffer, pkgSize);
 
     if (pkg->type != PKG_START) {
         printf("!!!ERROR::CTRL_PKG - Not START package\n");
         CtrlPackage_delete(&pkg);
-        free(pkg_buf);
+        free(buffer);
         return -1;
     }
 
-    uint expectedFileSize = atoi(pkg->params[CP_PARAM_SIZE].value);
+    int expectedFileSize = atoi(pkg->params[CP_PARAM_SIZE].value);
     char* filename = pkg->params[CP_PARAM_NAME].value;
 
     // Open output file
@@ -130,18 +131,18 @@ int AppLayer_receive(AppLayer* app) {
     printf("----------------------------\n");
 
     CtrlPackage_delete(&pkg);
-    free(pkg_buf);
+    free(buffer);
 
-    uint currFileSize = 0;
+    int currFileSize = 0;
     while (currFileSize != expectedFileSize) {
-        pkgSize = llread(app->fd, &pkg_buf);
+        pkgSize = llread(app->fd, &buffer);
         if (pkgSize < 0) printf("!!!ERROR::IO - Could not receive package\n");
 
-        pkg = CtrlPackage_from_buf(pkg_buf, pkgSize);
+        pkg = CtrlPackage_from_buf(buffer, pkgSize);
         if (pkg != NULL) { // If a control package
             if (pkg->type == PKG_END) {
                 printf("!!!ERROR::CTRL_PKG - Unnexpected END package\n");
-                free(pkg_buf);
+                free(buffer);
                 CtrlPackage_delete(&pkg);
                 res = -1;
                 break;
@@ -149,13 +150,13 @@ int AppLayer_receive(AppLayer* app) {
         }
         CtrlPackage_delete(&pkg);
 
-        DataPackage* data = DataPackage_from_buf(pkg_buf, pkgSize);
+        DataPackage* data = DataPackage_from_buf(buffer, pkgSize);
         if (data == NULL){
-            printf("!!!ERROR::DATA_PKG - Expected DATA package\n");
+            printf("!!!ERROR::DATA_PKG - Data package corrupted/non-existent\n");
             DataPackage_delete(&data);
-            free(pkg_buf);
+            free(buffer);
             res = -1;
-            break;
+            continue;
         }
         fwrite(&data->buffer[4], sizeof(char), data->dataSize, file);
 
@@ -168,18 +169,18 @@ int AppLayer_receive(AppLayer* app) {
         }
 
         DataPackage_delete(&data);
-        free(pkg_buf);
+        free(buffer);
     }
     printf("\n");
 
-    pkgSize = llread(app->fd, &pkg_buf);
-    pkg = CtrlPackage_from_buf(pkg_buf, pkgSize);
+    pkgSize = llread(app->fd, &buffer);
+    pkg = CtrlPackage_from_buf(buffer, pkgSize);
     if (pkg == NULL || pkg->type != PKG_END) {
         printf("!!!ERROR::CTRL_PKG - Expected END package\n");
         res = -1;
     }
     CtrlPackage_delete(&pkg);
-    free(pkg_buf);
+    free(buffer);
 
     fclose(file);
 
@@ -303,8 +304,17 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
     DataPackage* pkg = (DataPackage*) malloc(sizeof(DataPackage));
     pkg->type = PKG_DATA;
     pkg->N = N;
-    pkg->L2 = size / 256;
-    pkg->L1 = size % 256;
+    pkg->L2 = (unsigned char) (size / 256);
+    pkg->L1 = (unsigned char) (size % 256);
+
+    int dataSize = (unsigned int) (256 * pkg->L2 + pkg->L1);
+    if (size != dataSize) {
+        printf("%d | %d\n", pkg->L2, pkg->L1);
+        printf("!!!ERROR::DATA_PKG - Buffer size (%d) is not the expected size (%d)\n",
+               size, dataSize);
+        free(pkg);
+        return NULL;
+    }
 
     pkg->buffer = (char*) malloc((size+4)*sizeof(char));
     pkg->buffer[0] = PKG_DATA; pkg->buffer[1] = N; pkg->buffer[2] = pkg->L2; pkg->buffer[3] = pkg->L1;
@@ -313,30 +323,37 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
     pkg->dataSize = size;
 
     if (DEBUG) {
-        /* DataPackage_print(pkg); */
+        DataPackage_print(pkg);
     }
     return pkg;
 }
 
 DataPackage* DataPackage_from_buf(const char* buf, uint size) {
-    if (buf[0] != PKG_DATA) return NULL;
+    if (buf[0] != PKG_DATA || size < 4) return NULL;
 
     DataPackage* pkg = (DataPackage*) malloc(sizeof(DataPackage));
 
     pkg->type = buf[0];
     pkg->N = buf[1];
-    pkg->L2 = buf[2];
-    pkg->L1 = buf[3];
+    pkg->L2 = (unsigned char) buf[2];
+    pkg->L1 = (unsigned char) buf[3];
 
-    uint dataSize = 256 * pkg->L2 + pkg->L1;
+    int dataSize = (unsigned int) (256 * pkg->L2 + pkg->L1);
 
-    pkg->buffer = (char*) malloc((dataSize+4)*sizeof(char));
-    memcpy(pkg->buffer, buf, dataSize+4);
+    if (size != dataSize+4) {
+        printf("!!!ERROR::DATA_PKG - Buffer size (%d) is not the expected size (%d)\n",
+               size, dataSize+4);
+        free(pkg);
+        return NULL;
+    }
+
+    pkg->buffer = (char*) malloc(size*sizeof(char));
+    memcpy(pkg->buffer, buf, size);
 
     pkg->dataSize = dataSize;
 
     if (DEBUG) {
-        /* DataPackage_print(pkg); */
+        DataPackage_print(pkg);
     }
     return pkg;
 }
@@ -355,14 +372,13 @@ void DataPackage_print(DataPackage* pkg) {
     printf("------------------\n");
     switch(pkg->type) {
     case PKG_DATA:
-        printf("DATA PKG\n");
+        printf("DATA PKG - %d bytes\n", pkg->dataSize);
         break;
     default:
         return;
     }
 
     printf("%d | %d | %d\n", pkg->N, pkg->L2, pkg->L1);
-    fwrite(&pkg->buffer[4], sizeof(char), pkg->dataSize, stdout);
 
     printf("------------------\n");
 }
