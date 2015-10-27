@@ -21,8 +21,9 @@ int llopen(int porta, ConnectionFlag flag) {
     }
 
     // Open port
-    char port_name[strlen(DEVICE) + 1];
-    sprintf(port_name, "%s%d", DEVICE, porta);
+    const char* base_port = "/dev/ttyS";
+    char port_name[strlen(base_port) + 2];
+    sprintf(port_name, "%s%d", base_port, porta);
 
     printf("Opening port : '%s'\n", port_name);
 

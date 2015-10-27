@@ -15,7 +15,7 @@ AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
     }
 
     printf("+--------------------------\n");
-    printf("| Port: %s%d\n", DEVICE, port);
+    printf("| Port: %d\n", port);
     switch (status) {
     case CONN_RECEIVER:
         printf("| Receiver\n");
