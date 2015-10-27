@@ -24,8 +24,20 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    printf("\n");
+    printf("======================\n");
+    printf("Connection Established\n");
+    printf("======================\n");
+    printf("\n");
+
     AppLayer_start_transfer(app);
     AppLayer_delete(&app);
+
+    printf("\n");
+    printf("============\n");
+    printf("Disconnected\n");
+    printf("============\n");
+    printf("\n");
 
     return 0;
 }

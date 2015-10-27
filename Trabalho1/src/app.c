@@ -93,13 +93,13 @@ int AppLayer_send(AppLayer* app) {
     llwrite(app->fd, end->buffer, end->bufSize);
     CtrlPackage_delete(&end);
 
-    if (res > 0) printf("\n#\t#\t# File sent #\t#\t#\n\n");
+    if (res > 0) printf("\n\n###### File sent #######\n\n");
 
     return res;
 }
 
 int AppLayer_receive(AppLayer* app) {
-    int res = 0;
+    int res = 1;
 
     char* buffer;
     int pkgSize;
@@ -184,7 +184,7 @@ int AppLayer_receive(AppLayer* app) {
 
     fclose(file);
 
-    if (res > 0) printf("\n#\t#\t# File received #\t#\t#\n\n");
+    if (res > 0) printf("\n\n###### File received #######\n\n");
 
     return res;
 }
@@ -307,7 +307,7 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
     pkg->L2 = (unsigned char) (size / 256);
     pkg->L1 = (unsigned char) (size % 256);
 
-    int dataSize = (unsigned int) (256 * pkg->L2 + pkg->L1);
+    int dataSize = 256 * pkg->L2 + pkg->L1;
     if (size != dataSize) {
         printf("%d | %d\n", pkg->L2, pkg->L1);
         printf("!!!ERROR::DATA_PKG - Buffer size (%d) is not the expected size (%d)\n",
@@ -333,8 +333,8 @@ DataPackage* DataPackage_from_buf(const char* buf, uint size) {
 
     DataPackage* pkg = (DataPackage*) malloc(sizeof(DataPackage));
 
-    pkg->type = buf[0];
-    pkg->N = buf[1];
+    pkg->type = (PackageType) buf[0];
+    pkg->N = (unsigned char) buf[1];
     pkg->L2 = (unsigned char) buf[2];
     pkg->L1 = (unsigned char) buf[3];
 
