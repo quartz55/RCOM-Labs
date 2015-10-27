@@ -14,7 +14,8 @@ int TIME_TRANS = 3;
 
 AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
                                char* filename, int nTrans,
-                               int timeTrans, int maxSize, int debug, int simul) {
+                               int timeTrans, int maxSize,
+                               int debug, int simul) {
 
     NUM_TRANS = nTrans;
     TIME_TRANS = timeTrans;
@@ -33,9 +34,14 @@ AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
         break;
     }
     printf("| File: %s\n", filename);
-    printf("| Num transmission: %d\n", nTrans);
-    printf("| Time between transmissions: %d seconds\n", timeTrans);
-    printf("| Max data size: %d bytes\n", maxSize);
+    if (CONN_TRANSMITTER) {
+        printf("| Num transmission: %d\n", nTrans);
+        printf("| Time between transmissions: %d seconds\n", timeTrans);
+        printf("| Max data size: %d bytes\n", maxSize);
+    }
+    printf("| Debug: %s\n", debug ? "On" : "Off");
+    if (CONN_RECEIVER)
+        printf("| Simulate errors: %s\n", simul ? "On" : "Off");
     printf("+--------------------------\n");
 
     int fd = llopen(port, status);
@@ -56,15 +62,15 @@ int AppLayer_start_transfer(AppLayer* app) {
     if (app == NULL) return -1;
 
     switch(app->status) {
-    case CONN_RECEIVER: {
-        int res = AppLayer_receive(app);
-        llread(app->fd, NULL);
-        return res;
-        break;
-    }
-    case CONN_TRANSMITTER:
-        return AppLayer_send(app);
-        break;
+        case CONN_RECEIVER: {
+                                int res = AppLayer_receive(app);
+                                llread(app->fd, NULL);
+                                return res;
+                                break;
+                            }
+        case CONN_TRANSMITTER:
+                            return AppLayer_send(app);
+                            break;
     }
 
     return 0;
@@ -110,7 +116,7 @@ int AppLayer_send(AppLayer* app) {
         }
         else if (wr != pkg->dataSize+4) {
             printf("!!!ERROR:IO - Data sent (%d bytes) doesn't match data created (%d bytes)\n",
-                   wr, pkg->dataSize+4);
+                    wr, pkg->dataSize+4);
         }
         else written += wr-4;
 
@@ -312,25 +318,25 @@ void CtrlPackage_delete(CtrlPackage** pkg) {
 void CtrlPackage_print(CtrlPackage* pkg) {
     printf("------------------\n");
     switch(pkg->type) {
-    case PKG_START:
-        printf("START PKG\n");
-        break;
-    case PKG_END:
-        printf("END PKG\n");
-        break;
-    default:
-        return;
+        case PKG_START:
+            printf("START PKG\n");
+            break;
+        case PKG_END:
+            printf("END PKG\n");
+            break;
+        default:
+            return;
     }
 
     uint i;
     for (i = 0; i < CP_NUM_PARAMS; ++i) {
         switch(pkg->params[i].type) {
-        case CP_PARAM_SIZE:
-            printf("Size: %s (%d bytes)\n", pkg->params[i].value, pkg->params[i].length);
-            break;
-        case CP_PARAM_NAME:
-            printf("Name: %s (%d bytes)\n", pkg->params[i].value, pkg->params[i].length);
-            break;
+            case CP_PARAM_SIZE:
+                printf("Size: %s (%d bytes)\n", pkg->params[i].value, pkg->params[i].length);
+                break;
+            case CP_PARAM_NAME:
+                printf("Name: %s (%d bytes)\n", pkg->params[i].value, pkg->params[i].length);
+                break;
         }
     }
 
@@ -350,7 +356,7 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
     if (size != dataSize) {
         printf("%d | %d\n", pkg->L2, pkg->L1);
         printf("!!!ERROR::DATA_PKG - Buffer size (%d) is not the expected size (%d)\n",
-               size, dataSize);
+                size, dataSize);
         free(pkg);
         return NULL;
     }
@@ -381,7 +387,7 @@ DataPackage* DataPackage_from_buf(const char* buf, uint size) {
 
     if (size != dataSize+4) {
         printf("!!!ERROR::DATA_PKG - Buffer size (%d) is not the expected size (%d)\n",
-               size, dataSize+4);
+                size, dataSize+4);
         free(pkg);
         return NULL;
     }
@@ -410,11 +416,11 @@ void DataPackage_delete(DataPackage** pkg) {
 void DataPackage_print(DataPackage* pkg) {
     printf("------------------\n");
     switch(pkg->type) {
-    case PKG_DATA:
-        printf("DATA PKG - %d bytes\n", pkg->dataSize);
-        break;
-    default:
-        return;
+        case PKG_DATA:
+            printf("DATA PKG - %d bytes\n", pkg->dataSize);
+            break;
+        default:
+            return;
     }
 
     printf("%d | %d | %d\n", pkg->N, pkg->L2, pkg->L1);
