@@ -310,12 +310,6 @@ int configureTermios(int fd, struct termios *t) {
         return false;
     }
 
-    // Print configuration
-    printf("  | Port configurated successfully:\n");
-    printf("  |\t"); t->c_lflag ? printf("Canonical\n") : printf("Non-canonical\n");
-    printf("  |\tVTIME | %d\n", t->c_cc[VTIME]);
-    printf("  |\tVMIN | %d\n", t->c_cc[VMIN]);
-
     return true;
 }
 
