@@ -136,7 +136,7 @@ LLFrame* LLFrame_from_fd(int fd) {
 
     char c;
     uint size;
-    char* buf = (char*) malloc(MAX_SIZE*sizeof(char));
+    char* buf = (char*) malloc((MAX_SIZE+6)*sizeof(char));
 
 skipflags:
     read(fd, &c, sizeof(c));

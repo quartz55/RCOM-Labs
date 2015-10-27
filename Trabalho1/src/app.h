@@ -2,6 +2,7 @@
 #define APP_H
 
 #include "utils.h"
+#include <stdio.h>
 
 typedef enum {
     PKG_DATA, PKG_START, PKG_END
@@ -34,7 +35,10 @@ typedef struct {
 
 typedef struct {
     PackageType type;
-} APP_DataPackage;
+    char N, L2, L1;
+    uint dataSize;
+    char* buffer;
+} DataPackage;
 
 extern AppLayer* AppLayer_constructor(int port, ConnectionFlag status, char* filename);
 extern int AppLayer_start_transfer(AppLayer* app);
@@ -45,8 +49,15 @@ extern int AppLayer_send(AppLayer* app);
 
 
 extern CtrlPackage* CtrlPackage_create(PackageType type, int filesize, char* filename);
-extern CtrlPackage* CtrlPackage_from_buf(char* buf, uint size);
+extern CtrlPackage* CtrlPackage_from_buf(const char* buf, uint size);
 extern void CtrlPackage_delete(CtrlPackage** pkg);
 extern void CtrlPackage_print(CtrlPackage* pkg);
+
+extern DataPackage* DataPackage_create(int N, const char* data, uint size);
+extern DataPackage* DataPackage_from_buf(const char* buf, uint size);
+extern void DataPackage_delete(DataPackage** pkg);
+extern void DataPackage_print(DataPackage* pkg);
+
+extern int getFileSize(FILE* f);
 
 #endif /* APP_H */
