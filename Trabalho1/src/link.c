@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
+
 
 LinkLayer* ll;
 
@@ -20,9 +22,12 @@ int llopen(int porta, ConnectionFlag flag) {
         return -1;
     }
 
+    const char* port_base = "/dev/ttyS";
     // Open port
-    char port_name[strlen(DEVICE) + 1];
-    sprintf(port_name, "%s%d", DEVICE, porta);
+    char port_name[strlen(port_base) + 2];
+    //strncpy(port_name, DEVICE, strlen(DEVICE));
+    //port_name[strlen(DEVICE)] = '4';
+    sprintf(port_name, "%s%d", port_base, porta);
 
     printf("Opening port : '%s'\n", port_name);
 

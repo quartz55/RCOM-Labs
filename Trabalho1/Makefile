@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 LIBS =
 CFLAGS = -Wall -g -O3
 

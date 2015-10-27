@@ -7,7 +7,6 @@
 #include <termios.h>
 
 #define BAUDRATE B38400
-#define DEVICE "/dev/pts/"
 
 typedef struct {
     char port[20];

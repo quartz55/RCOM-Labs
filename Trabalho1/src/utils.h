@@ -14,7 +14,7 @@ typedef enum {
     CONN_RECEIVER
 } ConnectionFlag;
 
-inline void printProgressBar(int a, int b) {
+static inline void printProgressBar(int a, int b) {
     int barSize = 50;
     float perc = (float)a/b;
     printf("\r%d/%d (bytes) [", a, b);
