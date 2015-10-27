@@ -3,9 +3,7 @@
 
 #include "utils.h"
 
-#define MAX_SIZE 512
-#define BAUDRATE B38400
-#define DEVICE "/dev/pts/"
+#define MAX_SIZE 128
 
 #define FLAG 0x7e
 #define ESC 0x7d

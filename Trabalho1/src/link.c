@@ -121,10 +121,12 @@ int llwrite(int fd, const char* buffer, uint length) {
                     ll->sequenceNumber = response->nr;
 
                 alarm(0);
+                alarmRing = false;
                 transfering = false;
             }
             else if (LLFrame_is_command(response, C_REJ)) {
                 alarm(0);
+                alarmRing = false;
                 numTries = 0;
             }
             LLFrame_delete(&response);
@@ -246,6 +248,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
         if (c == FLAG) {
             LLFrame* response = LLFrame_from_fd(fd);
             if (LLFrame_is_command(response, answer)) {
+                alarm(0);
                 done = true;
                 res = 1;
             }

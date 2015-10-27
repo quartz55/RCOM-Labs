@@ -68,7 +68,7 @@ int AppLayer_send(AppLayer* app) {
 
     char buffer[MAX_SIZE];
     while((read = fread(buffer, sizeof(char), MAX_SIZE, file)) > 0) {
-        printf("Read from file: %s\n", buffer);
+        /* printf("Read from file: %s\n", buffer); */
         DataPackage* pkg = DataPackage_create(i%255, buffer, read);
         int wr = llwrite(app->fd, pkg->buffer, pkg->dataSize+4);
         DataPackage_delete(&pkg);
@@ -80,7 +80,7 @@ int AppLayer_send(AppLayer* app) {
         }
         written += wr;
 
-        printf("%d/%d (%d\%%)\n", written, filesize, (written/filesize)*100);
+        printf("%d/%d (%.0f\%%)\n", written, filesize, ((float)written/filesize)*100);
     }
 
     if (fclose(file) != 0) {
@@ -158,16 +158,19 @@ int AppLayer_receive(AppLayer* app) {
             break;
         }
         fwrite(&data->buffer[4], sizeof(char), data->dataSize, file);
-        /* printf("Wrote to file: \n"); */
-        /* fwrite(&data->buffer[4], sizeof(char), data->dataSize, stdout); */
 
         currFileSize += data->dataSize;
 
-        printf("%d/%d (%d\%%)\n", currFileSize, expectedFileSize, (currFileSize/expectedFileSize)*100);
+        if (DEBUG)
+        printf("%d/%d (%.0f\%%)\n", currFileSize, expectedFileSize, ((float)currFileSize/expectedFileSize)*100);
+        else {
+            printProgressBar(currFileSize, expectedFileSize);
+        }
 
         DataPackage_delete(&data);
         free(pkg_buf);
     }
+    printf("\n");
 
     pkgSize = llread(app->fd, &pkg_buf);
     pkg = CtrlPackage_from_buf(pkg_buf, pkgSize);
@@ -219,6 +222,7 @@ CtrlPackage* CtrlPackage_create(PackageType type, int filesize, char* filename) 
 
     pkg->bufSize = bufSize;
 
+    if (DEBUG)
     CtrlPackage_print(pkg);
     return pkg;
 }
@@ -244,6 +248,7 @@ CtrlPackage* CtrlPackage_from_buf(const char* buf, uint size) {
         ++param_i;
     }
 
+    if (DEBUG)
     CtrlPackage_print(pkg);
     return pkg;
 }
@@ -307,7 +312,9 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
 
     pkg->dataSize = size;
 
-    /* DataPackage_print(pkg); */
+    if (DEBUG) {
+        /* DataPackage_print(pkg); */
+    }
     return pkg;
 }
 
@@ -328,7 +335,9 @@ DataPackage* DataPackage_from_buf(const char* buf, uint size) {
 
     pkg->dataSize = dataSize;
 
-    /* DataPackage_print(pkg); */
+    if (DEBUG) {
+        /* DataPackage_print(pkg); */
+    }
     return pkg;
 }
 
