@@ -158,7 +158,8 @@ int AppLayer_receive(AppLayer* app) {
             break;
         }
         fwrite(&data->buffer[4], sizeof(char), data->dataSize, file);
-        printf("Wrote to file: %s\n", &data->buffer[4]);
+        /* printf("Wrote to file: \n"); */
+        /* fwrite(&data->buffer[4], sizeof(char), data->dataSize, stdout); */
 
         currFileSize += data->dataSize;
 
@@ -306,7 +307,7 @@ DataPackage* DataPackage_create(int N, const char* data, uint size) {
 
     pkg->dataSize = size;
 
-    DataPackage_print(pkg);
+    /* DataPackage_print(pkg); */
     return pkg;
 }
 
@@ -323,12 +324,11 @@ DataPackage* DataPackage_from_buf(const char* buf, uint size) {
     uint dataSize = 256 * pkg->L2 + pkg->L1;
 
     pkg->buffer = (char*) malloc((dataSize+4)*sizeof(char));
-    pkg->buffer[0] = pkg->type; pkg->buffer[1] = pkg->N; pkg->buffer[2] = pkg->L2; pkg->buffer[3] = pkg->L1;
-    memcpy(&pkg->buffer[4], buf, dataSize);
+    memcpy(pkg->buffer, buf, dataSize+4);
 
     pkg->dataSize = dataSize;
 
-    DataPackage_print(pkg);
+    /* DataPackage_print(pkg); */
     return pkg;
 }
 
@@ -353,7 +353,7 @@ void DataPackage_print(DataPackage* pkg) {
     }
 
     printf("%d | %d | %d\n", pkg->N, pkg->L2, pkg->L1);
-    printf("%s\n", &pkg->buffer[4]);
+    fwrite(&pkg->buffer[4], sizeof(char), pkg->dataSize, stdout);
 
     printf("------------------\n");
 }
