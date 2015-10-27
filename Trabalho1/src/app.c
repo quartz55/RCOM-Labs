@@ -56,7 +56,9 @@ int AppLayer_send(AppLayer* app) {
         return -2;
     }
     int filesize = getFileSize(file);
-    printf("Opened file %s to send (%d bytes)\n", app->filename, filesize);
+    printf("----------------------------\n");
+    printf("Sending file '%s' (%d bytes)\n", app->filename, filesize);
+    printf("----------------------------\n\n");
 
     CtrlPackage* start = CtrlPackage_create(PKG_START, filesize, app->filename);
     llwrite(app->fd, start->buffer, start->bufSize);
@@ -70,14 +72,19 @@ int AppLayer_send(AppLayer* app) {
     while((read = fread(buffer, sizeof(char), MAX_SIZE, file)) > 0) {
         DataPackage* pkg = DataPackage_create(i%255, buffer, read);
         int wr = llwrite(app->fd, pkg->buffer, pkg->dataSize+4);
-        DataPackage_delete(&pkg);
 
         if (wr < 0) {
             printf("!!!ERROR::IO - Could not send package\n");
             res = -1;
             break;
         }
-        written += wr;
+        else if (wr != pkg->dataSize+4) {
+            printf("!!!ERROR:IO - Data sent (%d bytes) doesn't match data created (%d bytes)\n",
+                   wr, pkg->dataSize+4);
+        }
+        else written += wr-4;
+
+        DataPackage_delete(&pkg);
 
         if (DEBUG)
         printf("%d/%d (%.0f\%%)\n", written, filesize, ((float)written/filesize)*100);
@@ -126,9 +133,9 @@ int AppLayer_receive(AppLayer* app) {
     }
 
     printf("----------------------------\n");
-    printf("Receiving file '%s'(%d bytes)\n", filename, expectedFileSize);
+    printf("Receiving file '%s' (%d bytes)\n", filename, expectedFileSize);
     printf("Saving as '%s'\n", app->filename);
-    printf("----------------------------\n");
+    printf("----------------------------\n\n");
 
     CtrlPackage_delete(&pkg);
     free(buffer);
