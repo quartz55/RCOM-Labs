@@ -99,8 +99,10 @@ int llwrite(int fd, const char* buffer, uint length) {
         if (numTries == 0 || alarmRing) {
             if (numTries > ll->numTransmissions) {
                 alarm(0);
+                alarmRing = false;
                 printf("!!!ERROR::RETRANSMISSION - Maximum number of retransmissions exceeded!!!!\n");
                 transfering = false;
+                written = -1;
                 break;
             }
 
@@ -138,6 +140,7 @@ int llwrite(int fd, const char* buffer, uint length) {
 
     LLFrame_delete(&data);
     alarm(0);
+    alarmRing = false;
 
     return written;
 }
@@ -231,6 +234,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
         if (numTries == 0 || alarmRing) {
             if (numTries > ll->numTransmissions) {
                 alarm(0);
+                alarmRing = false;
                 printf("!!!ERROR::RETRANSMISSION - Maximum number of retransmissions exceeded!!!!\n");
                 done = true;
                 break;
@@ -252,6 +256,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
             LLFrame* response = LLFrame_from_fd(fd);
             if (LLFrame_is_command(response, answer)) {
                 alarm(0);
+                alarmRing = false;
                 done = true;
                 res = 1;
             }
@@ -259,6 +264,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
         }
     }
     alarm(0);
+    alarmRing = false;
 
     return res;
 }

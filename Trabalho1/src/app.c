@@ -21,10 +21,7 @@ AppLayer* AppLayer_constructor(int port, ConnectionFlag status, char* filename) 
 }
 
 int AppLayer_start_transfer(AppLayer* app) {
-    if (app == NULL){
-        printf("Something went wrong\n");
-        return -1;
-    }
+    if (app == NULL) return -1;
 
     switch(app->status) {
     case CONN_RECEIVER: {
@@ -77,6 +74,7 @@ int AppLayer_send(AppLayer* app) {
             printf("!!!ERROR::IO - Could not send package\n");
             res = -1;
             break;
+            DataPackage_delete(&pkg);
         }
         else if (wr != pkg->dataSize+4) {
             printf("!!!ERROR:IO - Data sent (%d bytes) doesn't match data created (%d bytes)\n",
@@ -96,9 +94,11 @@ int AppLayer_send(AppLayer* app) {
         res = -2;
     }
 
-    CtrlPackage* end = CtrlPackage_create(PKG_END, filesize, app->filename);
-    llwrite(app->fd, end->buffer, end->bufSize);
-    CtrlPackage_delete(&end);
+    if (res != -1) {
+        CtrlPackage* end = CtrlPackage_create(PKG_END, filesize, app->filename);
+        llwrite(app->fd, end->buffer, end->bufSize);
+        CtrlPackage_delete(&end);
+    }
 
     if (res > 0) printf("\n\n###### File sent #######\n\n");
 
@@ -170,7 +170,7 @@ int AppLayer_receive(AppLayer* app) {
         currFileSize += data->dataSize;
 
         if (DEBUG)
-        printf("%d/%d (%.0f\%%)\n", currFileSize, expectedFileSize, ((float)currFileSize/expectedFileSize)*100);
+            printf("%d/%d (%.0f\%%)\n", currFileSize, expectedFileSize, ((float)currFileSize/expectedFileSize)*100);
         else {
             printProgressBar(currFileSize, expectedFileSize);
         }
@@ -231,7 +231,7 @@ CtrlPackage* CtrlPackage_create(PackageType type, int filesize, char* filename) 
     pkg->bufSize = bufSize;
 
     if (DEBUG)
-    CtrlPackage_print(pkg);
+        CtrlPackage_print(pkg);
     return pkg;
 }
 
@@ -257,7 +257,7 @@ CtrlPackage* CtrlPackage_from_buf(const char* buf, uint size) {
     }
 
     if (DEBUG)
-    CtrlPackage_print(pkg);
+        CtrlPackage_print(pkg);
     return pkg;
 }
 
