@@ -21,7 +21,7 @@ typedef struct {
 
 extern LinkLayer* ll;
 
-extern int linkLayer_constructor(int fd, char* port_name, uint timeout, uint nTrans, ConnectionFlag mode);
+extern int linkLayer_constructor(int fd, char* port_name, ConnectionFlag mode);
 
 /**
  * Establishes a connection on the port specified

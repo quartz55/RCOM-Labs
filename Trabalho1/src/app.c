@@ -1,18 +1,22 @@
 #include "app.h"
+#include "utils.h"
 #include "link.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+int MAX_SIZE = 512;
+int NUM_TRANS = 3;
+int TIME_TRANS = 3;
+
 AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
                                char* filename, int nTrans,
                                int timeTrans, int maxSize) {
-    int fd = llopen(port, status);
-    if (fd < 0) {
-        printf("!!!ERROR::CONNECTION - Couldn't establish connection\n");
-        return NULL;
-    }
+
+    NUM_TRANS = nTrans;
+    TIME_TRANS = timeTrans;
+    MAX_SIZE = maxSize;
 
     printf("+--------------------------\n");
     printf("| Port: %d\n", port);
@@ -29,6 +33,12 @@ AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
     printf("| Time between transmissions: %d seconds\n", timeTrans);
     printf("| Max data size: %d bytes\n", maxSize);
     printf("+--------------------------\n");
+
+    int fd = llopen(port, status);
+    if (fd < 0) {
+        printf("!!!ERROR::CONNECTION - Couldn't establish connection\n");
+        return NULL;
+    }
 
     AppLayer* app = (AppLayer*) malloc(sizeof(AppLayer));
     app->fd = fd;

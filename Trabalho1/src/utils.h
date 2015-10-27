@@ -3,8 +3,12 @@
 
 #include <stdio.h>
 
-static int DEBUG = 0;
-static int SIMUL_ERROR = 1;
+#define DEBUG 0
+#define SIMUL_ERROR 1
+
+extern int NUM_TRANS;
+extern int TIME_TRANS;
+extern int MAX_SIZE;
 
 typedef unsigned int uint;
 typedef enum {false, true} bool;

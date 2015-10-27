@@ -38,12 +38,12 @@ int llopen(int porta, ConnectionFlag flag) {
     int res = -1;
     // Transmitter
     if (flag == CONN_TRANSMITTER) {
-        linkLayer_constructor(fd, port_name, 1, 3, CONN_TRANSMITTER);
+        linkLayer_constructor(fd, port_name, CONN_TRANSMITTER);
         res = llopen_as_transmitter(fd);
     }
     // Receiver
     else {
-        linkLayer_constructor(fd, port_name, 1, 3, CONN_RECEIVER);
+        linkLayer_constructor(fd, port_name, CONN_RECEIVER);
         res = llopen_as_receiver(fd);
     }
 
@@ -315,12 +315,12 @@ int configureTermios(int fd, struct termios *t) {
     return true;
 }
 
-int linkLayer_constructor(int fd, char* port_name, uint timeout, uint nTrans, ConnectionFlag mode){
+int linkLayer_constructor(int fd, char* port_name, ConnectionFlag mode){
     ll = (LinkLayer*) malloc(sizeof(LinkLayer));
     strcpy(ll->port, port_name);
     ll->sequenceNumber = 0;
-    ll->timeout = timeout;
-    ll->numTransmissions = nTrans;
+    ll->timeout = TIME_TRANS;
+    ll->numTransmissions = NUM_TRANS;
     ll->mode = mode;
 
     printf("Saving previous port configuration...\n");
