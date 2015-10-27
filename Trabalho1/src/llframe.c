@@ -21,6 +21,7 @@ LLFrame* LLFrame_create_info(const char* data, uint dataSize, int ns) {
     msg[4 + dataSize] = getBCC(data, dataSize);
     msg[4 + dataSize + 1] = FLAG;
 
+
     f->data.message = msg;
 
     if (DEBUG) {

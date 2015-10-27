@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 static int DEBUG = 0;
+static int SIMUL_ERROR = 1;
 
 typedef unsigned int uint;
 typedef enum {false, true} bool;

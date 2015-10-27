@@ -146,14 +146,12 @@ int AppLayer_receive(AppLayer* app) {
         if (pkgSize < 0) printf("!!!ERROR::IO - Could not receive package\n");
 
         pkg = CtrlPackage_from_buf(buffer, pkgSize);
-        if (pkg != NULL) { // If a control package
-            if (pkg->type == PKG_END) {
+        if (pkg != NULL && pkg->type == PKG_END) { // If END package
                 printf("!!!ERROR::CTRL_PKG - Unnexpected END package\n");
                 free(buffer);
                 CtrlPackage_delete(&pkg);
                 res = -1;
                 break;
-            }
         }
         CtrlPackage_delete(&pkg);
 
@@ -162,7 +160,7 @@ int AppLayer_receive(AppLayer* app) {
             printf("!!!ERROR::DATA_PKG - Data package corrupted/non-existent\n");
             DataPackage_delete(&data);
             free(buffer);
-            res = -1;
+            res = -3;
             continue;
         }
         fwrite(&data->buffer[4], sizeof(char), data->dataSize, file);
@@ -180,14 +178,16 @@ int AppLayer_receive(AppLayer* app) {
     }
     printf("\n");
 
-    pkgSize = llread(app->fd, &buffer);
-    pkg = CtrlPackage_from_buf(buffer, pkgSize);
-    if (pkg == NULL || pkg->type != PKG_END) {
-        printf("!!!ERROR::CTRL_PKG - Expected END package\n");
-        res = -1;
+    if (res != -1) {
+        pkgSize = llread(app->fd, &buffer);
+        pkg = CtrlPackage_from_buf(buffer, pkgSize);
+        if (pkg == NULL || pkg->type != PKG_END) {
+            printf("!!!ERROR::CTRL_PKG - Expected END package\n");
+            res = -1;
+        }
+        CtrlPackage_delete(&pkg);
+        free(buffer);
     }
-    CtrlPackage_delete(&pkg);
-    free(buffer);
 
     fclose(file);
 

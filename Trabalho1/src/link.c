@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 
 LinkLayer* ll;
 
@@ -44,6 +45,7 @@ int llopen(int porta, ConnectionFlag flag) {
         res = llopen_as_receiver(fd);
     }
 
+    srand(time(NULL));
     return res;
 }
 
@@ -94,7 +96,6 @@ int llwrite(int fd, const char* buffer, uint length) {
 
     (void) signal(SIGALRM, alarm_handler);
 
-    LLFrame* data = LLFrame_create_info(buffer, length, ll->sequenceNumber);
     while (transfering) {
         if (numTries == 0 || alarmRing) {
             if (numTries > ll->numTransmissions) {
@@ -112,7 +113,9 @@ int llwrite(int fd, const char* buffer, uint length) {
             alarmRing = false;
             alarm(ll->timeout);
 
+            LLFrame* data = LLFrame_create_info(buffer, length, ll->sequenceNumber);
             written = LLFrame_write(data, fd);
+            LLFrame_delete(&data);
 
             ++numTries;
         }
@@ -137,8 +140,6 @@ int llwrite(int fd, const char* buffer, uint length) {
             LLFrame_delete(&response);
         }
     }
-
-    LLFrame_delete(&data);
     alarm(0);
     alarmRing = false;
 
@@ -160,9 +161,17 @@ int llread(int fd, char** buffer) {
         LLFrame* buf = LLFrame_from_fd(fd);
         if (LLFrame_is_invalid(buf) && buf != NULL) {
             if (buf->error == LL_ERROR_BCC2) {
-                LLFrame* rej = LLFrame_create_command(A_ANS_R, C_REJ, buf->ns);
-                LLFrame_write(rej, fd);
-                LLFrame_delete(&rej);
+            BCC2_ERROR_SIMUL:
+                if (ll->sequenceNumber == buf->ns) { // New frame
+                    LLFrame* rej = LLFrame_create_command(A_ANS_R, C_REJ, buf->ns);
+                    LLFrame_write(rej, fd);
+                    LLFrame_delete(&rej);
+                }
+                else if (ll->sequenceNumber != buf->ns) { // Duplicate
+                    LLFrame* rr = LLFrame_create_command(A_ANS_R, C_RR, ll->sequenceNumber);
+                    LLFrame_write(rr, fd);
+                    LLFrame_delete(&rr);
+                }
             }
         }
         else if (LLFrame_is_command(buf, C_DISC)) {
@@ -173,7 +182,17 @@ int llread(int fd, char** buffer) {
             done = true;
         }
         else if (buf->type == LL_FRAME_INFO) {
-            if (ll->sequenceNumber == buf->ns) {
+            if (ll->sequenceNumber == buf->ns) { // New frame
+
+                // Random generation of BCC2 errors
+                if (SIMUL_ERROR) {
+                    int random_number = rand()%10000 + 1;
+                    if (random_number <= 5) {
+                        printf("\nSimulating BCC2 error\n");
+                        goto BCC2_ERROR_SIMUL;
+                    }
+                }
+
                 size = LLFrame_get_data(buf, buffer);
 
                 ll->sequenceNumber = !buf->ns;
@@ -183,6 +202,11 @@ int llread(int fd, char** buffer) {
                 LLFrame_delete(&rr);
 
                 done = true;
+            }
+            else if (ll->sequenceNumber != buf->ns) { // Duplicate frame
+                LLFrame* rr = LLFrame_create_command(A_ANS_R, C_RR, ll->sequenceNumber);
+                LLFrame_write(rr, fd);
+                LLFrame_delete(&rr);
             }
         }
         LLFrame_delete(&buf);
