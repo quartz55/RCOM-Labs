@@ -42,7 +42,8 @@ typedef struct {
 
 extern AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
                                       char* filename, int nTrans,
-                                      int timeTrans, int maxSize);
+                                      int timeTrans, int maxSize,
+                                      int debug, int simul);
 extern int AppLayer_start_transfer(AppLayer* app);
 extern void AppLayer_delete(AppLayer** app);
 

@@ -3,9 +3,8 @@
 
 #include <stdio.h>
 
-#define DEBUG 0
-#define SIMUL_ERROR 1
-
+extern int DEBUG;
+extern int SIMUL_ERROR;
 extern int NUM_TRANS;
 extern int TIME_TRANS;
 extern int MAX_SIZE;

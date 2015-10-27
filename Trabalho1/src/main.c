@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    int port, mode, numTrans, timeTrans, maxSize;
+    int port, mode, numTrans, timeTrans, maxSize, debug, simul;
     char filename[50];
 
     if (argc == 1) {
@@ -32,20 +32,40 @@ int main(int argc, char* argv[]) {
         }
         printf("Filename: ");
         scanf("%s", filename);
-        while (1) {
-            printf("Maximum number of retransmissions: ");
-            scanf("%d", &numTrans);
-            if (numTrans >= 0) break;
+        if (mode == CONN_TRANSMITTER) {
+            while (1) {
+                printf("Maximum number of retransmissions: ");
+                scanf("%d", &numTrans);
+                if (numTrans >= 0) break;
+            }
+            while (1) {
+                printf("Time between retransmissions (seconds): ");
+                scanf("%d", &timeTrans);
+                if (timeTrans > 0) break;
+            }
+            while (1) {
+                printf("Maximum size for data frames (bytes): ");
+                scanf("%d", &maxSize);
+                if (maxSize > 0) break;
+            }
         }
         while (1) {
-            printf("Time between retransmissions (seconds): ");
-            scanf("%d", &timeTrans);
-            if (timeTrans > 0) break;
+            printf("Debug:\n");
+            printf("  (0) Off\n");
+            printf("  (1) On\n");
+            printf("> ");
+            scanf("%d", &debug);
+            if (debug == 0 || debug == 1) break;
         }
-        while (1) {
-            printf("Maximum size for data frames (bytes): ");
-            scanf("%d", &maxSize);
-            if (maxSize > 0) break;
+        if (mode == CONN_RECEIVER) {
+            while (1) {
+                printf("Simulate errors:\n");
+                printf("  (0) Off\n");
+                printf("  (1) On\n");
+                printf("> ");
+                scanf("%d", &simul);
+                if (simul == 0 || simul == 1) break;
+            }
         }
     }
     else {
@@ -55,6 +75,8 @@ int main(int argc, char* argv[]) {
         numTrans = 3;
         timeTrans = 3;
         maxSize = 512;
+        debug = 0;
+        simul = 0;
     }
 
     printf("MODE: %d\n", mode);
@@ -64,7 +86,7 @@ int main(int argc, char* argv[]) {
     }
 
     AppLayer* app = AppLayer_constructor(port, mode, filename,
-                                         numTrans, timeTrans, maxSize);
+            numTrans, timeTrans, maxSize, debug, simul);
 
     if (app != NULL) {
         printf("\n");

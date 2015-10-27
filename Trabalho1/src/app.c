@@ -6,17 +6,21 @@
 #include <stdio.h>
 #include <string.h>
 
+int DEBUG = 0;
+int SIMUL_ERROR = 0;
 int MAX_SIZE = 512;
 int NUM_TRANS = 3;
 int TIME_TRANS = 3;
 
 AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
                                char* filename, int nTrans,
-                               int timeTrans, int maxSize) {
+                               int timeTrans, int maxSize, int debug, int simul) {
 
     NUM_TRANS = nTrans;
     TIME_TRANS = timeTrans;
     MAX_SIZE = maxSize;
+    DEBUG = debug;
+    SIMUL_ERROR = simul;
 
     printf("+--------------------------\n");
     printf("| Port: %d\n", port);
