@@ -68,7 +68,7 @@ LLFrame* LLFrame_from_buf(const char buf[], uint size) {
 
     uint index = 0;
     char A, C;
-    char* data;
+    char *data = (char *) malloc((size-4)*sizeof(char));
     uint dataIndex = 0;
 
     LLFrame* frame;
@@ -94,9 +94,9 @@ LLFrame* LLFrame_from_buf(const char buf[], uint size) {
                     LL_C ll_c = 0x0F & C;
                     uint nr = C >> 5;
                     frame = LLFrame_create_command(A, ll_c, nr);
+                    free(data);
                     return frame;
                 }
-                data = (char *) malloc((size-4)*sizeof(char));
                 state = DATA_STATE;
                 ++index;
             }
@@ -123,6 +123,7 @@ LLFrame* LLFrame_from_buf(const char buf[], uint size) {
             frame->type = LL_FRAME_INVALID;
             frame->error = err;
             frame->ns = ns;
+            free(data);
             return frame;
             break;
         }
@@ -174,10 +175,10 @@ int LLFrame_write(LLFrame* frame, int fd) {
 
     int stuffed_size = stuff_buffer(&stuffed, frame->data.size);
 
-    LLFrame test;
-    test.type = LL_FRAME_COMMAND;
-    test.data.message = stuffed;
-    test.data.size = stuffed_size;
+    /* LLFrame test; */
+    /* test.type = LL_FRAME_COMMAND; */
+    /* test.data.message = stuffed; */
+    /* test.data.size = stuffed_size; */
 
     written = write(fd, stuffed, stuffed_size);
     /* printf("Write %d bytes\n", written); */

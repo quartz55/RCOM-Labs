@@ -2,27 +2,69 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char* argv[]) {
 
-    if (argc != 4) {
-        printf("Usage: %s [PORT] [MODE] [FILENAME]\n", argv[0]);
+    if (argc != 1 && argc!= 4) {
+        printf("Usage: %s [FILENAME] [PORT] [MODE]\n", argv[0]);
+        printf("Interactive mode: %s", argv[0]);
         return 1;
     }
-    int port, mode;
 
-    port = atoi(argv[1]);
-    mode = atoi(argv[2]);
+    int port, mode, numTrans, timeTrans, maxSize;
+    char filename[50];
 
-    AppLayer* app;
-    if (mode == 0)
-        app = AppLayer_constructor(port, CONN_RECEIVER, argv[3]);
-    else if (mode == 1)
-        app = AppLayer_constructor(port, CONN_TRANSMITTER, argv[3]);
+    if (argc == 1) {
+        printf("Interactive mode: \n");
+        while (1) {
+            printf("Mode:\n");
+            printf("  (0) Transmitter\n");
+            printf("  (1) Receiver\n");
+            printf("> ");
+            scanf("%d", &mode);
+            if (mode == 0 || mode == 1) break;
+        }
+        while (1) {
+            printf("Port: ");
+            scanf("%d", &port);
+            if (port >= 0) break;
+        }
+        printf("Filename: ");
+        scanf("%s", filename);
+        while (1) {
+            printf("Maximum number of retransmissions: ");
+            scanf("%d", &numTrans);
+            if (numTrans >= 0) break;
+        }
+        while (1) {
+            printf("Time between retransmissions (seconds): ");
+            scanf("%d", &timeTrans);
+            if (timeTrans > 0) break;
+        }
+        while (1) {
+            printf("Maximum size for data frames (bytes): ");
+            scanf("%d", &maxSize);
+            if (maxSize > 0) break;
+        }
+    }
     else {
-        printf("Invalid mode! (0 - Receive | 1 - Send)\n");
+        strcpy(filename, argv[1]);
+        port = atoi(argv[2]);
+        mode = atoi(argv[3]);
+        numTrans = 3;
+        timeTrans = 3;
+        maxSize = 512;
+    }
+
+    printf("MODE: %d\n", mode);
+    if (mode != 0 && mode != 1) {
+        printf("Invalid mode! (0 - Receiver | 1 - Transmitter)\n");
         return 1;
     }
+
+    AppLayer* app = AppLayer_constructor(port, mode, filename,
+                                         numTrans, timeTrans, maxSize);
 
     if (app != NULL) {
         printf("\n");

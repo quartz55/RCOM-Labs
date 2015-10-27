@@ -22,12 +22,9 @@ int llopen(int porta, ConnectionFlag flag) {
         return -1;
     }
 
-    const char* port_base = "/dev/ttyS";
-    // Open port
-    char port_name[strlen(port_base) + 2];
-    //strncpy(port_name, DEVICE, strlen(DEVICE));
-    //port_name[strlen(DEVICE)] = '4';
-    sprintf(port_name, "%s%d", port_base, porta);
+    const char* base_port = "/dev/ttyS";
+    char port_name[strlen(base_port) + 2];
+    sprintf(port_name, "%s%d", base_port, porta);
 
     printf("Opening port : '%s'\n", port_name);
 
@@ -314,12 +311,6 @@ int configureTermios(int fd, struct termios *t) {
         perror("tcsetattr");
         return false;
     }
-
-    // Print configuration
-    printf("  | Port configurated successfully:\n");
-    printf("  |\t"); t->c_lflag ? printf("Canonical\n") : printf("Non-canonical\n");
-    printf("  |\tVTIME | %d\n", t->c_cc[VTIME]);
-    printf("  |\tVMIN | %d\n", t->c_cc[VMIN]);
 
     return true;
 }

@@ -5,12 +5,30 @@
 #include <stdio.h>
 #include <string.h>
 
-AppLayer* AppLayer_constructor(int port, ConnectionFlag status, char* filename) {
+AppLayer* AppLayer_constructor(int port, ConnectionFlag status,
+                               char* filename, int nTrans,
+                               int timeTrans, int maxSize) {
     int fd = llopen(port, status);
     if (fd < 0) {
         printf("!!!ERROR::CONNECTION - Couldn't establish connection\n");
         return NULL;
     }
+
+    printf("+--------------------------\n");
+    printf("| Port: %d\n", port);
+    switch (status) {
+    case CONN_RECEIVER:
+        printf("| Receiver\n");
+        break;
+    case CONN_TRANSMITTER:
+        printf("| Transmitter\n");
+        break;
+    }
+    printf("| File: %s\n", filename);
+    printf("| Num transmission: %d\n", nTrans);
+    printf("| Time between transmissions: %d seconds\n", timeTrans);
+    printf("| Max data size: %d bytes\n", maxSize);
+    printf("+--------------------------\n");
 
     AppLayer* app = (AppLayer*) malloc(sizeof(AppLayer));
     app->fd = fd;
@@ -85,7 +103,7 @@ int AppLayer_send(AppLayer* app) {
         DataPackage_delete(&pkg);
 
         if (DEBUG)
-        printf("%d/%d (%.0f\%%)\n", written, filesize, ((float)written/filesize)*100);
+            printf("%d/%d (%.0f\%%)\n", written, filesize, ((float)written/filesize)*100);
         else printProgressBar(written, filesize);
     }
 
@@ -147,11 +165,11 @@ int AppLayer_receive(AppLayer* app) {
 
         pkg = CtrlPackage_from_buf(buffer, pkgSize);
         if (pkg != NULL && pkg->type == PKG_END) { // If END package
-                printf("!!!ERROR::CTRL_PKG - Unnexpected END package\n");
-                free(buffer);
-                CtrlPackage_delete(&pkg);
-                res = -1;
-                break;
+            printf("!!!ERROR::CTRL_PKG - Unnexpected END package\n");
+            free(buffer);
+            CtrlPackage_delete(&pkg);
+            res = -1;
+            break;
         }
         CtrlPackage_delete(&pkg);
 
