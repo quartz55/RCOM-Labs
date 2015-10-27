@@ -1,11 +1,9 @@
-#ifndef LLFRAME_H
+ #ifndef LLFRAME_H
 #define LLFRAME_H
 
 #include "utils.h"
 
-#define MAX_SIZE 512
-#define BAUDRATE B38400
-#define DEVICE "/dev/pts/"
+#define MAX_SIZE (1<<8)
 
 #define FLAG 0x7e
 #define ESC 0x7d

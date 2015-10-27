@@ -23,9 +23,9 @@ LLFrame* LLFrame_create_info(const char* data, uint dataSize, int ns) {
 
     f->data.message = msg;
 
-    printf("Info %d created\n", f->ns);
-    /* LLFrame_print_data(f); printf("\n"); */
-    /* LLFrame_print_msg(f, "Info created: "); */
+    if (DEBUG) {
+        printf("Info %d created\n", f->ns);
+    }
 
     return f;
 }
@@ -50,8 +50,10 @@ LLFrame* LLFrame_create_command(LL_A a, LL_C controlField, int nr) {
     f->data.message = msg;
     f->data.size = 5;
 
-    print_command(controlField);
-    LLFrame_print_msg(f, "Command created: ");
+    if (DEBUG) {
+        print_command(controlField);
+        LLFrame_print_msg(f, "Command created: ");
+    }
 
     return f;
 }
@@ -136,25 +138,26 @@ LLFrame* LLFrame_from_fd(int fd) {
 
     char c;
     uint size;
-    char* buf = (char*) malloc((MAX_SIZE+6)*sizeof(char));
+    uint size_inc = 1;
+    char* buf = (char*) malloc(MAX_SIZE*sizeof(char));
 
 skipflags:
     read(fd, &c, sizeof(c));
     while (c == FLAG) read(fd, &c, sizeof(c));
 
     size = 0;
-    bzero(buf, MAX_SIZE);
     do {
         buf[size] = c;
         res = read(fd, &c, sizeof(c));
         if (res < 0) perror("!!!ERROR::IO");
-        else if (res == 0) continue;
-        ++size;
-    } while (c != FLAG && size < MAX_SIZE);
-    /* printf("Read %d bytes\n", size+2); */
+        size += res;
+        if (size >= MAX_SIZE)
+            buf = (char*) realloc(buf, ++size_inc*MAX_SIZE*sizeof(char));
+    } while (c != FLAG);
     if (size < 3) goto skipflags;
 
     int destuff_size = destuff_buffer(&buf, size);
+    /* printf("Read %d bytes (%d after destuff)\n", size+2, destuff_size+2); */
 
     LLFrame* frame = LLFrame_from_buf(buf, destuff_size);
     free(buf);

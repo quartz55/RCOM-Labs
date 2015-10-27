@@ -35,8 +35,8 @@ typedef struct {
 
 typedef struct {
     PackageType type;
-    char N, L2, L1;
-    uint dataSize;
+    unsigned char N, L2, L1;
+    int dataSize;
     char* buffer;
 } DataPackage;
 

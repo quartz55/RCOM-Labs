@@ -32,16 +32,19 @@ int llopen(int porta, ConnectionFlag flag) {
         return -1;
     }
 
+    int res = -1;
     // Transmitter
     if (flag == CONN_TRANSMITTER) {
         linkLayer_constructor(fd, port_name, 1, 3, CONN_TRANSMITTER);
-        return llopen_as_transmitter(fd);
+        res = llopen_as_transmitter(fd);
     }
     // Receiver
     else {
         linkLayer_constructor(fd, port_name, 1, 3, CONN_RECEIVER);
-        return llopen_as_receiver(fd);
+        res = llopen_as_receiver(fd);
     }
+
+    return res;
 }
 
 int llopen_as_transmitter(int fd) {
@@ -121,10 +124,12 @@ int llwrite(int fd, const char* buffer, uint length) {
                     ll->sequenceNumber = response->nr;
 
                 alarm(0);
+                alarmRing = false;
                 transfering = false;
             }
             else if (LLFrame_is_command(response, C_REJ)) {
                 alarm(0);
+                alarmRing = false;
                 numTries = 0;
             }
             LLFrame_delete(&response);
@@ -188,7 +193,7 @@ int llread(int fd, char** buffer) {
  */
 int llclose(int fd) {
     if (ll->mode == CONN_TRANSMITTER) {
-        printf("Closing connection...\n");
+        printf("Trying to close connection...\n");
 
         LLFrame* disc = LLFrame_create_command(A_COM_T, C_DISC, 0);
         int res = send_with_retransmission(fd, disc, C_DISC);
@@ -202,17 +207,17 @@ int llclose(int fd) {
     }
 
 close:
-    printf("Restoring old port configuration...\n");
+    if (DEBUG)
+        printf("Restoring old port configuration...\n");
     if (tcsetattr(fd, TCSANOW, &ll->oldtio) == -1 ){
         perror("tcsetattr");
         return -1;
     }
 
-    printf("Closing port...\n");
-    printf("============\n");
-    printf("Disconnected\n");
-    printf("============\n");
+    if (DEBUG)
+        printf("Closing port...\n");
     close(fd);
+
     return 1;
 }
 
@@ -246,6 +251,7 @@ int send_with_retransmission(int fd, LLFrame* msg, LL_C answer) {
         if (c == FLAG) {
             LLFrame* response = LLFrame_from_fd(fd);
             if (LLFrame_is_command(response, answer)) {
+                alarm(0);
                 done = true;
                 res = 1;
             }
