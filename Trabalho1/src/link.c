@@ -189,7 +189,7 @@ int llread(int fd, char** buffer) {
                 // Random generation of BCC2 errors
                 if (SIMUL_ERROR) {
                     int random_number = rand()%10000 + 1;
-                    if (random_number <= 5) {
+                    if (random_number <= 50) {
                         printf("\nSimulating BCC2 error\n");
                         goto BCC2_ERROR_SIMUL;
                     }
