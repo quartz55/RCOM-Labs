@@ -46,44 +46,45 @@ int URLparser(URL* url, const char* urlStr)
 
     validateURL(tempURL, &userMode, currentRegex, nmatch, pmatch);
 
+    printf("%s\n", tempURL);
+
     // remove ftp:// from string
-    strcpy(tempURL, tempURL + 6);
+    memmove(tempURL, tempURL+6, strlen(tempURL));
 
     if (userMode) {
         // remove [ from string
-        strcpy(tempURL, tempURL + 1);
+	memmove(tempURL, tempURL+1, strlen(tempURL));
 
         // save username
-        strcpy(URLcontent, processURLContent(tempURL, ':'));
-        memcpy(url->user, URLcontent, strlen(URLcontent));
+        URLcontent = processURLContent(tempURL, ':');
+        memmove(url->user, URLcontent, strlen(URLcontent));
 
         // save password
-        strcpy(URLcontent, processURLContent(tempURL, '@'));
-        memcpy(url->pass, URLcontent, strlen(URLcontent));
+        URLcontent = processURLContent(tempURL, '@');
+        memmove(url->pass, URLcontent, strlen(URLcontent));
 
         // remove ] from string
-        strcpy(tempURL, tempURL + 1);
+	memmove(tempURL, tempURL+1, strlen(tempURL));
     }
 
     // save host
-    strcpy(URLcontent, processURLContent(tempURL, '/'));
-    memcpy(url->host, URLcontent, strlen(URLcontent));
+    URLcontent = processURLContent(tempURL, '/');
+    strcpy(url->host, URLcontent);
 
     // save url path
-    char* path = (char*)malloc(strlen(tempURL));
+    char path[strlen(tempURL)];
+    bzero(path, strlen(path));
     while (strchr(tempURL, '/') != NULL) {
         URLcontent = processURLContent(tempURL, '/');
 
         strcat(path, URLcontent);
-
         strcat(path, "/");
     }
     memcpy(url->path, path, strlen(path));
 
     // save filename
-    memcpy(url->file, tempURL, strlen(tempURL));
+    memmove(url->file, tempURL, strlen(tempURL));
 
-    free(tempURL);
     free(URLcontent);
 
     return 1;
@@ -130,7 +131,7 @@ char* processURLContent(char* str, char chr)
     // termination char
     tempStr[end] = '\0';
 
-    strcpy(str, str + strlen(tempStr) + 1);
+    memmove(str, str + strlen(tempStr) + 1, strlen(str));
 
     return tempStr;
 }
