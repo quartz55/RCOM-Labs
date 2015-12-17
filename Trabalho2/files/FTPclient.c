@@ -83,6 +83,13 @@ int FTP_Disconnect(FTP* ftp)
         return 1;
     }
 
+    return FTP_Quit(ftp);
+}
+
+int FTP_Quit(FTP* ftp)
+{
+    char buf[1024];
+
     sprintf(buf, "QUIT\r\n");
     if (FTP_Send(ftp, buf, strlen(buf))) {
         printf("!!!ERROR!!! Could not send QUIT.\n");
@@ -209,6 +216,11 @@ int FTP_RETR(FTP* ftp, const char* filename)
         return -1;
     }
 
+    if (strncmp(retr, "550xxxx", 3) == 0) {
+	printf("!!!ERROR!!! File not found.\n");
+	return -1;
+    }
+
     char* beg = strchr(retr, '(') + 1;
     char* end = strchr(beg, ' ');
     int numBytes = (end - retr) - (beg - retr);
@@ -228,7 +240,7 @@ int FTP_Send(FTP* ftp, const char* str, size_t size)
         return 1;
     }
 
-#ifdef DEBUG
+#ifdef DEBUG_PASS
     char msg[size - 1];
     strncpy(msg, str, size - 2);
     msg[size - 2] = '\0';

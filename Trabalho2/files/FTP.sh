@@ -1,14 +1,16 @@
 #!bin/sh
 
+exec="ftpdownload"
+
 if [ -z $1 ]
 then
-    exec="ftpdownload"
+	exec="ftpdownload"
 elif [ $1 = "debug" ]
 then
-    exec="ftpdownload_debug"
+	exec="ftpdownload_debug"
 fi
 
-function anonymous_mode {
+anonymous_mode() {
     echo '+----------------------+'
     echo '|Anonymous mode example|'
     echo '+----------------------+'
@@ -16,7 +18,7 @@ function anonymous_mode {
     echo -n "Default example? (Y/n)"
     read option
 
-    if [[ -z $option || $option != "n" ]]
+    if [ -z $option ]  || [ $option != "n" ]
     then
         path="pub/CPAN/RECENT-1M.json"
     else
@@ -24,29 +26,32 @@ function anonymous_mode {
         read path
     fi
 
-
     echo "---> Running ${exec}"
     ./$exec ftp://ftp.up.pt/$path
 }
 
-function user_mode {
+user_mode() {
     echo '+-----------------+'
     echo '|User mode example|'
     echo '+-----------------+'
 
     echo -n "Default example? (Y/n)"
     read option
-    if [[ -z $option || $option != "n" ]]
+    if [ -z $option ] || [ $option != "n" ]
     then
         echo -n "Password for 'up201304197': "
-        read -s pwd
+	stty -echo
+        read pwd
+	stty echo
         echo
         url="ftp://[up201304197:${pwd}@]tom.fe.up.pt/Documents/RCOM_ftp_test1.txt"
     else
         echo -n "User: "
         read username
         echo -n "Password: "
-        read -s password
+	stty -echo
+        read password
+	stty echo
         echo
         echo -n "Path to file: "
         read path

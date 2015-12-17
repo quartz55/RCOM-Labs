@@ -1,6 +1,6 @@
 
 production:
-	gcc -Wall -O0 -o ftpdownload downloader.c URLparser.c FTPclient.c
+	gcc -Wall -O2 -o ftpdownload downloader.c URLparser.c FTPclient.c
 
 all: production debug
 

@@ -11,13 +11,15 @@ int main(int argc, char** argv)
                argv[0]);
         return 1;
     }
-
+    
     /* --------------- URL Parser ------------------- */
 
     URL url;
     initURL(&url);
 
     if (!URLparser(&url, argv[1])) return -1;
+
+	printf("Parsed url\n");
 
     if (!getIp(&url)) {
         printf("!!!ERROR!!! Cannot find IP to hostname %s.\n", url.host);
@@ -77,9 +79,14 @@ int main(int argc, char** argv)
     }
 
     int fileSize = FTP_RETR(&ftp, url.file);
-    FTP_Download(&ftp, url.file, fileSize);
-
-    FTP_Disconnect(&ftp);
+    if (fileSize > 0) {
+        FTP_Download(&ftp, url.file, fileSize);
+	FTP_Disconnect(&ftp);
+    }
+    else {
+	FTP_Quit(&ftp);
+	return 1;
+    }
 
     return 0;
 }
