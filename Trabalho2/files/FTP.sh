@@ -26,8 +26,6 @@ anonymous_mode() {
         read path
     fi
 
-    path="pub/CPAN/RECENT-1M.json"
-
     echo "---> Running ${exec}"
     ./$exec ftp://ftp.up.pt/$path
 }

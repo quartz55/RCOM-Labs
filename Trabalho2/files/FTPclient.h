@@ -13,6 +13,7 @@ typedef struct FTP_t {
 extern int FTP_Connect(FTP* ftp, const char* ip, int port);
 extern int FTP_Download(FTP* ftp, const char* filename, const int fileSize);
 extern int FTP_Disconnect(FTP* ftp);
+extern int FTP_Quit(FTP* ftp);
 
 extern int FTP_Login(FTP* ftp, const char* user, const char* password);
 extern int FTP_CWD(FTP* ftp, const char* path);

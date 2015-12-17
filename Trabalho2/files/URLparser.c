@@ -34,58 +34,58 @@ void initURL(URL* url)
 
 int URLparser(URL* url, const char* urlStr)
 {
-    char *tempURL, *URLcontent, *currentRegex = NULL;
+    char *aux, *currentRegex = NULL;
     int userMode;
     size_t nmatch = strlen(urlStr);
     regmatch_t pmatch[nmatch];
 
-    URLcontent = (char*)malloc(strlen(urlStr));
-    tempURL = (char*)malloc(strlen(urlStr));
+    char tempURL[strlen(urlStr)];
 
-    memcpy(tempURL, urlStr, strlen(urlStr));
+    strcpy(tempURL, urlStr);
 
-    validateURL(tempURL, &userMode, currentRegex, nmatch, pmatch);
-
-    printf("%s\n", tempURL);
+    if (!validateURL(tempURL, &userMode, currentRegex, nmatch, pmatch)) {
+	printf("!!!ERROR!!! Invalid URL\n");
+	return 0;
+    }
 
     // remove ftp:// from string
     memmove(tempURL, tempURL+6, strlen(tempURL));
+
 
     if (userMode) {
         // remove [ from string
 	memmove(tempURL, tempURL+1, strlen(tempURL));
 
         // save username
-        URLcontent = processURLContent(tempURL, ':');
-        memmove(url->user, URLcontent, strlen(URLcontent));
+        aux = processURLContent(tempURL, ':');
+        memmove(url->user, aux, strlen(aux));
 
         // save password
-        URLcontent = processURLContent(tempURL, '@');
-        memmove(url->pass, URLcontent, strlen(URLcontent));
+        aux = processURLContent(tempURL, '@');
+        memmove(url->pass, aux, strlen(aux));
 
         // remove ] from string
 	memmove(tempURL, tempURL+1, strlen(tempURL));
     }
 
     // save host
-    URLcontent = processURLContent(tempURL, '/');
-    strcpy(url->host, URLcontent);
+    aux = processURLContent(tempURL, '/');
+    strcpy(url->host, aux);
 
     // save url path
     char path[strlen(tempURL)];
     bzero(path, strlen(path));
     while (strchr(tempURL, '/') != NULL) {
-        URLcontent = processURLContent(tempURL, '/');
+        aux = processURLContent(tempURL, '/');
 
-        strcat(path, URLcontent);
+        strcat(path, aux);
         strcat(path, "/");
+
     }
     memcpy(url->path, path, strlen(path));
 
     // save filename
     memmove(url->file, tempURL, strlen(tempURL));
-
-    free(URLcontent);
 
     return 1;
 }
@@ -120,7 +120,7 @@ int validateURL(const char* URL, int* userMode, char* currentRegex,
 
 char* processURLContent(char* str, char chr)
 {
-    char* tempStr = (char*)malloc(strlen(str));
+    char* tempStr = (char*)malloc(strlen(str)*sizeof(char));
     int end = strlen(str) - strlen(strcpy(tempStr, strchr(str, chr)));
 
     int i;
